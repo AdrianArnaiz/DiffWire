@@ -10,9 +10,10 @@ from torch_geometric.utils import to_dense_batch, to_dense_adj
 
 # Make with Ahmed the features of featureless dataset
 class TUDatasetFeatures(TUDataset):
-  def __init__(self, root, name,dataset):
+  def __init__(self, root, name, dataset):
     self.new_num_features = 1
     self.new_num_classes = dataset.num_classes
+    self.name = name
     #self.new_num_graphs = 450000 
     self.data = []
     for d in dataset: 
@@ -31,16 +32,5 @@ class TUDatasetFeatures(TUDataset):
       return self.new_num_features
   def __getitem__(self, item):
     return self.data[item]
-'''
-  
-  data = dataset[0]  # Get the first graph object.
-
-  dataset = dataset.shuffle()
-
-  train_dataset = dataset[:40000]
-  test_dataset = dataset[40000:]
-
-  train_loader = DataLoader(train_dataset, batch_size=100, shuffle=True) # from 64 to 100
-  test_loader = DataLoader(test_dataset, batch_size=100, shuffle=False)  # from 64 to 100
-    
-'''
+  def __repr__(self) -> str:
+    return f'{self.__class__.__name__}({self.name})'
