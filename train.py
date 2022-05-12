@@ -64,6 +64,7 @@ args = parser.parse_args()
 No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
 if args.dataset not in GNNBenchmarkDataset.names:
     if args.dataset not in No_Features:
+        dataset = TUDataset(root='data/TUDataset', name=args.dataset)
         if args.dataset =="MUTAG":
             TRAIN_SPLIT = 150
             BATCH_SIZE = 32
@@ -72,7 +73,7 @@ if args.dataset not in GNNBenchmarkDataset.names:
             TRAIN_SPLIT = 500
             BATCH_SIZE = 32
             num_of_centers = 32 #mean number of nodes according to PyGeom
-        if args.dataset =="PROTEINES":
+        if args.dataset =="PROTEINS":
             TRAIN_SPLIT = 1000
             BATCH_SIZE = 64
             num_of_centers = 39 #mean number of nodes according to PyGeom
@@ -94,10 +95,12 @@ else: #GNNBenchmarkDataset
     dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset', name=args.dataset) #MNISTo CIFAR10
     if args.dataset =="MNIST":
         TRAIN_SPLIT = 50000
-        BATCH_SIZE =100
+        BATCH_SIZE = 100
+        num_of_centers = 100
     elif args.dataset == "CIFAR10":
         TRAIN_SPLIT = 40000
         BATCH_SIZE = 100
+        num_of_centers = 100
     #nothing
 #Mejorable, se puede hacer de una en el run10
 train_dataset = dataset[:TRAIN_SPLIT] #MNIST : 50000 - CIFAR: 40000
@@ -108,15 +111,15 @@ if args.model == 'CTNet':
         model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
 elif args.model == 'GAPNet':
     model = GAPNet(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
-else:
-    raise Exception("Not model in list of models")
-
-print(model)
-print(TRAIN_SPLIT," ",BATCH_SIZE," " ,dataset.num_classes," ",dataset.num_features)
-print(dataset[0].x)
+    
+print("- M:", model, "\n- D:",dataset,  
+        "- Train_split:", TRAIN_SPLIT, "- B:",BATCH_SIZE,
+        "- Centers (if CTNet):", num_of_centers, "- LAP (if GAPNet):", args.derivative,
+        "- Classes" ,dataset.num_classes,"- Feats",dataset.num_features)
+exit()
 ######################################################
-train_log_file = "ComplexDerivativeTEST_"
-#RandList = [12345, 42345, 64345, 54345, 74345, 47345, 54321, 14321, 94321, 84328]
+
+RandList = [12345, 42345, 64345, 54345, 74345, 47345, 54321, 14321, 94321, 84328]
 #RandList = RandList[:]
 
 #DERIVATIVE = "laplacian" #laplacian or normalized
@@ -126,7 +129,9 @@ train_log_file = "ComplexDerivativeTEST_"
 #TRAIN_SPLIT = 50000 if DATASET=='MNIST' else 40000
 
 
-train_log_file = train_log_file + args.dataset +time.strftime('%d_%m_%y__%H_%M') + '.txt'
+train_log_file = f"{args.dataset}_{args.models}"
+train_log_file = train_log_file + f"_{args.derivative}" if args.model=="GAPNet" else train_log_file
+train_log_file = train_log_file + f"_{time.strftime('%d_%m_%y__%H_%M')}.txt"
 
 ######################################################
 ######################################################
@@ -176,6 +181,10 @@ test_dataset = dataset[TRAIN_SPLIT:]
 ExperimentResult = []
 
 f = open(train_log_file, 'w') #clear file
+print("- M:", model, "\n- D:",dataset,  
+        "- Train_split:", TRAIN_SPLIT, "- B:",BATCH_SIZE,
+        "- Centers (if CTNet):", num_of_centers, "- LAP (if GAPNet):", args.derivative,
+        "- Classes" ,dataset.num_classes,"- Feats",dataset.num_features, file=f)
 f.close()
 for e in range(len(RandList)):
     #Da problemas el shuffle con los dataset sin features
