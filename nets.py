@@ -116,7 +116,7 @@ class GAPNet(torch.nn.Module):
 
 
 class CTNet(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, hidden_channels=32):
+    def __init__(self, in_channels, out_channels, k_centers, hidden_channels=32):
         super(CTNet, self).__init__()
         # GCN Layer - MLP - Dense GCN Layer
         #self.conv1 = GCNConv(in_channels, hidden_channels)
@@ -125,7 +125,7 @@ class CTNet(torch.nn.Module):
         num_of_centers2 =  16 # k2 #mincut
         #num_of_centers2 =  10 # k2
         #num_of_centers2 =  5 # k2
-        num_of_centers1 =  100 # k1 #order of number of nodes
+        num_of_centers1 =  k_centers # k1 #order of number of nodes
         # The degree of the node belonging to any of the centers
         self.pool1 = Linear(hidden_channels, num_of_centers1) 
         self.pool2 = Linear(hidden_channels, num_of_centers2) 
