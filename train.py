@@ -4,6 +4,8 @@ from nets import CTNet, GAPNet
 import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import GNNBenchmarkDataset, TUDataset
+import torch_geometric.transforms as T
+from transform_features import FeatureDegree
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_dense_batch, to_dense_adj
 from no_features_class import TUDatasetFeatures 
@@ -73,9 +75,9 @@ if args.dataset not in GNNBenchmarkDataset.names:
             BATCH_SIZE = 64
             num_of_centers = 39 #mean number of nodes according to PyGeom
     else:
-        datasetGNN = TUDataset(root='data/TUDataset', name=args.dataset)
-        dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset, dataset=datasetGNN)
-        
+        #datasetGNN = TUDataset(root='data/TUDataset', name=args.dataset)
+        dataset = TUDataset(root='data/TUDataset',name=args.dataset, pre_transform=FeatureDegree(), use_node_attr=True)
+        #dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset, dataset=datasetGNN)        
         if args.dataset =="IMDB-BINARY": # 1000 graphs
             TRAIN_SPLIT = 800
             BATCH_SIZE = 64
@@ -140,7 +142,6 @@ def test(loader):
     correct = 0
     for data in loader:
         data = data.to(device)
-        #print(data.x)
         pred, mc_loss, o_loss = model(data.x, data.edge_index, data.batch)
         #print(next(model.parameters()).device)
         #print(data.x.device)
@@ -148,7 +149,6 @@ def test(loader):
         correct += pred.max(dim=1)[1].eq(data.y.view(-1)).sum().item()
 
     return loss, correct / len(loader.dataset)
-
 
 ######################################################
 print(device)
@@ -162,7 +162,6 @@ print("- M:", args.model, "- D:",dataset,
         "- Centers (if CTNet):", num_of_centers, "- LAP (if GAPNet):", args.derivative,
         "- Classes" ,dataset.num_classes,"- Feats",dataset.num_features, file=f)
 f.close()
-exit()
 for e in range(len(RandList)):
     if args.model == 'CTNet':
         model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
