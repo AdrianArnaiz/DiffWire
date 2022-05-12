@@ -1,0 +1,5 @@
+Epoch: 001, Train Loss: nan, Train Acc: 0.560, Test Loss: nan, Test Acc: 0.000
+Epoch: 002, Train Loss: nan, Train Acc: 0.625, Test Loss: nan, Test Acc: 0.000
+Epoch: 003, Train Loss: nan, Train Acc: 0.625, Test Loss: nan, Test Acc: 0.000
+Epoch: 004, Train Loss: nan, Train Acc: 0.625, Test Loss: nan, Test Acc: 0.000
+Epoch: 005, Train Loss: nan, Train Acc: 0.625, Test Loss: nan, Test Acc: 0.000
