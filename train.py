@@ -1,4 +1,5 @@
 from math import ceil
+import random
 from nets import CTNet, GAPNet
 import torch
 import torch.nn.functional as F
@@ -29,6 +30,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #device = "cuda:1"
 BATCH_SIZE = 0
 TRAIN_SPLIT = 0
+N_EPOCH = 60
+RandList = [12345, 42345, 64345, 54345, 74345, 47345, 54321, 14321, 94321, 84328]
+No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
 parser = argparse.ArgumentParser()
 parser.add_argument(
         "--dataset",
@@ -36,7 +40,6 @@ parser.add_argument(
         choices=["MUTAG","ENZYMES","PROTEINS","CIFAR10","MNIST","COLLAB","IMDB-BINARY","REDDIT-BINARY"],
         help="nada",
 )
-No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
 parser.add_argument(
     "--model",
     default="CTNet",
@@ -57,13 +60,14 @@ parser.add_argument(
     )
 args = parser.parse_args()
 
-
 #Procesing dataset
 if args.dataset not in GNNBenchmarkDataset.names:
     if args.dataset not in No_Features:
         print("TODO")
     else:
-        dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset)
+        datasetGNN = TUDataset(root='data/TUDataset', name=args.dataset)
+        dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset,dataset=datasetGNN)
+        
         if args.dataset =="IMDB-BINARY":
             TRAIN_SPLIT = 800
             BATCH_SIZE = 64
@@ -81,31 +85,33 @@ else: #GNNBenchmarkDataset
         TRAIN_SPLIT = 40000
         BATCH_SIZE = 100
     #nothing
+#Mejorable, se puede hacer de una en el run10
+train_dataset = dataset[:TRAIN_SPLIT] #MNIST : 50000 - CIFAR: 40000
+test_dataset = dataset[TRAIN_SPLIT:] 
 #Procesing model
-
-
 arquitecture = globals()[args.model]
 if args.model == 'CTNet':
-    model = arquitecture(dataset.num_features, dataset.num_classes).to(device)
-else:
+    model = arquitecture(dataset.new_num_features, dataset.new_num_classes).to(device)
+elif args.model == 'GAPNet':
     model = arquitecture(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
-    
+else:
+    raise Exception("Not model in list of models")
 print(model)
-print(TRAIN_SPLIT," ",BATCH_SIZE," " ,dataset.new_num_classes," ",dataset.new_num_features)
-exit()
+print(TRAIN_SPLIT," ",BATCH_SIZE," " ,dataset.num_classes," ",dataset.num_features)
+print(dataset[0].x)
 ######################################################
 train_log_file = "ComplexDerivativeTEST_"
-RandList = [12345, 42345, 64345, 54345, 74345, 47345, 54321, 14321, 94321, 84328]
+#RandList = [12345, 42345, 64345, 54345, 74345, 47345, 54321, 14321, 94321, 84328]
 #RandList = RandList[:]
 
-DERIVATIVE = "laplacian" #laplacian or normalized
+#DERIVATIVE = "laplacian" #laplacian or normalized
 
-BATCH_SIZE = 100
-DATASET = 'CIFAR10'
-TRAIN_SPLIT = 50000 if DATASET=='MNIST' else 40000
+#BATCH_SIZE = 100
+#DATASET = 'CIFAR10'
+#TRAIN_SPLIT = 50000 if DATASET=='MNIST' else 40000
 
 
-train_log_file = train_log_file + DATASET +time.strftime('%d_%m_%y__%H_%M') + '.txt'
+train_log_file = train_log_file + args.dataset +time.strftime('%d_%m_%y__%H_%M') + '.txt'
 
 ######################################################
 ######################################################
@@ -116,25 +122,20 @@ def train(epoch, loader):
     #i = 0
     for data in loader:
         data = data.to(device)
-        
         optimizer.zero_grad()
         out, mc_loss, o_loss = model(data.x, data.edge_index, data.batch) # data.batch  torch.Size([783])
-
         loss = F.nll_loss(out, data.y.view(-1)) + mc_loss + o_loss
         loss.backward()
         loss_all += data.y.size(0) * loss.item()
         optimizer.step()
-
         correct += out.max(dim=1)[1].eq(data.y.view(-1)).sum().item() #accuracy in train AFTER EACH BACH
     #print("Training graphs per epoch", nG)
     return loss_all / len(loader.dataset), correct / len(loader.dataset)
-
 
 @torch.no_grad()
 def test(loader):
     model.eval()
     correct = 0
-
     for data in loader:
         data = data.to(device)
         #print(data.x)
@@ -150,9 +151,9 @@ def test(loader):
 ######################################################
 print(device)
 
-dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset', name=DATASET) #MNISTo CIFAR10
-data = dataset[0]  # Get the first graph object.
-dataset = dataset.shuffle()
+#dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset', name=DATASET) #MNISTo CIFAR10
+#data = dataset[0]  # Get the first graph object.
+#dataset = dataset.shuffle()
 
 train_dataset = dataset[:TRAIN_SPLIT] #MNIST : 50000 - CIFAR: 40000
 test_dataset = dataset[TRAIN_SPLIT:] 
@@ -164,18 +165,12 @@ f = open(train_log_file, 'w') #clear file
 f.close()
 for e in range(len(RandList)):
     #model = GAPNet(dataset.num_features, dataset.num_classes, derivative=DERIVATIVE, device=device).to(device)
-    if args.model == 'CTNet':
-        model = arquitecture(dataset.num_features, dataset.num_classes).to(device)
-    elif args.model == 'GAPNet':
-        model = arquitecture(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
-    else:
-        raise Exception("Not model in list of models")
     #model = CTNet(dataset.num_features, dataset.num_classes).to(device)
     #model = GAPNet(dataset.new_num_features, dataset.new_num_classes).to(device)
     #model = NetCT(dataset.new_num_features, dataset.new_num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-4)#
-    train_loader = DataLoader(train_dataset.shuffle(), batch_size=BATCH_SIZE, shuffle=True) # Original 64
-    test_loader = DataLoader(test_dataset.shuffle(), batch_size=BATCH_SIZE, shuffle=False)  # Original 64
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True) # Original 64
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)  # Original 64
     #train_dataset = train_dataset.shuffle()
     #test_dataset = test_dataset.shuffle()
     optimizer.zero_grad()
