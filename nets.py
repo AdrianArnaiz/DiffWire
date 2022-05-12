@@ -122,21 +122,19 @@ class CTNet(torch.nn.Module):
         #self.conv1 = GCNConv(in_channels, hidden_channels)
         self.conv1 = DenseGraphConv(hidden_channels, hidden_channels)
         self.conv2 = DenseGraphConv(hidden_channels, hidden_channels)
-        num_of_centers2 =  16 # k2 #mincut
-        #num_of_centers2 =  10 # k2
-        #num_of_centers2 =  5 # k2
-        num_of_centers1 =  k_centers # k1 #order of number of nodes
+        
         # The degree of the node belonging to any of the centers
-        self.pool1 = Linear(hidden_channels, num_of_centers1) 
+        num_of_centers1 =  k_centers # k1 #order of number of nodes
+        self.pool1 = Linear(hidden_channels, num_of_centers1)
+        num_of_centers2 =  16 # k2 #mincut 
         self.pool2 = Linear(hidden_channels, num_of_centers2) 
+
         # MLPs towards out 
         self.lin1 = Linear(in_channels, hidden_channels)
         self.lin2 = Linear(hidden_channels, hidden_channels)
         self.lin3 = Linear(hidden_channels, out_channels)
+ 
 
-        # Input: Batch of 20 graphs, each node F=3 features 
-        #        N1 + N2 + ... + N2 = 661
-        # TSNE here?
     def forward(self, x, edge_index, batch):    # x torch.Size([N, N]),  data.batch  torch.Size([661])  
     
         # Make all adjacencies of size NxN 
@@ -160,8 +158,7 @@ class CTNet(torch.nn.Module):
         if torch.isnan(adj).any():
           print("adj nan")
         if torch.isnan(x).any():
-          print("x nan") 
-
+          print("x nan")
         
         # CT REWIRING
         adj, CT_loss, ortho_loss1 = dense_CT_rewiring(x, adj, s1, mask) # out: x torch.Size([20, N, F'=32]),  adj torch.Size([20, N, N])
