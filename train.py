@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch_geometric.datasets import GNNBenchmarkDataset, TUDataset
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_dense_batch, to_dense_adj
-from no_features_class import * 
+from no_features_class import TUDatasetFeatures 
 import time
 import argparse
 '''
@@ -26,13 +26,8 @@ import argparse
         weight decay
 
 '''
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#device = "cuda:1"
-BATCH_SIZE = 0
-TRAIN_SPLIT = 0
-N_EPOCH = 60
-RandList = [12345, 42345, 64345, 54345, 74345, 47345, 54321, 14321, 94321, 84328]
-No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
+
+################### Arguments parameters ###################################
 parser = argparse.ArgumentParser()
 parser.add_argument(
         "--dataset",
@@ -64,69 +59,61 @@ args = parser.parse_args()
 No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
 if args.dataset not in GNNBenchmarkDataset.names:
     if args.dataset not in No_Features:
-        if args.dataset =="MUTAG":
+        dataset = TUDataset(root='data/TUDataset', name=args.dataset)
+        if args.dataset =="MUTAG": # 188 graphs
             TRAIN_SPLIT = 150
             BATCH_SIZE = 32
             num_of_centers = 17 #mean number of nodes according to PyGeom
-        if args.dataset =="ENZYMES":
+        if args.dataset =="ENZYMES": # 600 graphs
             TRAIN_SPLIT = 500
-            BATCH_SIZE = 32
-            num_of_centers = 32 #mean number of nodes according to PyGeom
-        if args.dataset =="PROTEINES":
+            BATCH_SIZE = 16
+            num_of_centers = 16 #mean number of nodes according to PyGeom
+        if args.dataset =="PROTEINS": # 1113 graphs
             TRAIN_SPLIT = 1000
             BATCH_SIZE = 64
             num_of_centers = 39 #mean number of nodes according to PyGeom
     else:
         datasetGNN = TUDataset(root='data/TUDataset', name=args.dataset)
-        dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset,dataset=datasetGNN)
+        dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset, dataset=datasetGNN)
         
-        if args.dataset =="IMDB-BINARY":
+        if args.dataset =="IMDB-BINARY": # 1000 graphs
             TRAIN_SPLIT = 800
             BATCH_SIZE = 64
             num_of_centers = 20 #mean number of nodes according to PyGeom
-        elif args.dataset == "REDDIT-BINARY":
+        elif args.dataset == "REDDIT-BINARY":  # 2000 graphs
             TRAIN_SPLIT = 1500
             BATCH_SIZE = 64
             num_of_centers = 420 #mean number of nodes according to PyGeom
+        elif args.dataset == "COLLAB":  # 2000 graphs
+            TRAIN_SPLIT = 4500
+            BATCH_SIZE = 64
+            num_of_centers = 75 #mean number of nodes according to PyGeom
         else:
             raise Exception("Not dataset in list of datasets")
 else: #GNNBenchmarkDataset
     dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset', name=args.dataset) #MNISTo CIFAR10
     if args.dataset =="MNIST":
         TRAIN_SPLIT = 50000
-        BATCH_SIZE =100
+        BATCH_SIZE = 100
+        num_of_centers = 100
     elif args.dataset == "CIFAR10":
         TRAIN_SPLIT = 40000
         BATCH_SIZE = 100
-    #nothing
-#Mejorable, se puede hacer de una en el run10
-train_dataset = dataset[:TRAIN_SPLIT] #MNIST : 50000 - CIFAR: 40000
-test_dataset = dataset[TRAIN_SPLIT:] 
-#Procesing model
-arquitecture = globals()[args.model]
-if args.model == 'CTNet':
-        model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
-elif args.model == 'GAPNet':
-    model = GAPNet(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
-else:
-    raise Exception("Not model in list of models")
+        num_of_centers = 100
 
-print(model)
-print(TRAIN_SPLIT," ",BATCH_SIZE," " ,dataset.num_classes," ",dataset.num_features)
-print(dataset[0].x)
-######################################################
-train_log_file = "ComplexDerivativeTEST_"
-#RandList = [12345, 42345, 64345, 54345, 74345, 47345, 54321, 14321, 94321, 84328]
-#RandList = RandList[:]
+##################### STATIC Variables #################################
 
-#DERIVATIVE = "laplacian" #laplacian or normalized
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#device = "cuda:1"
 
-#BATCH_SIZE = 100
-#DATASET = 'CIFAR10'
-#TRAIN_SPLIT = 50000 if DATASET=='MNIST' else 40000
+N_EPOCH = 60
+No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
 
+train_log_file = f"TEST_{args.dataset}_{args.model}"
+train_log_file = train_log_file + f"_{args.derivative}" if args.model=="GAPNet" else train_log_file
+train_log_file = train_log_file + f"_{time.strftime('%d_%m_%y__%H_%M')}.txt"
 
-train_log_file = train_log_file + args.dataset +time.strftime('%d_%m_%y__%H_%M') + '.txt'
+RandList = [12345, 42345, 64345, 54345, 74345, 47345, 54321, 14321, 94321, 84328]
 
 ######################################################
 ######################################################
@@ -166,22 +153,26 @@ def test(loader):
 ######################################################
 print(device)
 
-#dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset', name=DATASET) #MNISTo CIFAR10
-#data = dataset[0]  # Get the first graph object.
-#dataset = dataset.shuffle()
-
-train_dataset = dataset[:TRAIN_SPLIT] #MNIST : 50000 - CIFAR: 40000
-test_dataset = dataset[TRAIN_SPLIT:] 
 #torch.autograd.set_detect_anomaly(True)
 ExperimentResult = []
 
 f = open(train_log_file, 'w') #clear file
+print("- M:", args.model, "- D:",dataset,  
+        "- Train_split:", TRAIN_SPLIT, "- B:",BATCH_SIZE,
+        "- Centers (if CTNet):", num_of_centers, "- LAP (if GAPNet):", args.derivative,
+        "- Classes" ,dataset.num_classes,"- Feats",dataset.num_features, file=f)
 f.close()
+exit()
 for e in range(len(RandList)):
+    if args.model == 'CTNet':
+        model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
+    elif args.model == 'GAPNet':
+        model = GAPNet(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
     #Da problemas el shuffle con los dataset sin features
-    #dataset = dataset.shuffle()
-    train_dataset = dataset[:TRAIN_SPLIT] #MNIST : 50000 - CIFAR: 40000
+    dataset = dataset.copy().shuffle()
+    train_dataset = dataset[:TRAIN_SPLIT]
     test_dataset = dataset[TRAIN_SPLIT:] 
+    print(len(train_dataset),len(test_dataset))
     #model = GAPNet(dataset.num_features, dataset.num_classes, derivative=DERIVATIVE, device=device).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-4)#
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True) # Original 64
