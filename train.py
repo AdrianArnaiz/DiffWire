@@ -36,7 +36,6 @@ parser.add_argument(
         choices=["MUTAG","ENZYMES","PROTEINS","CIFAR10","MNIST","COLLAB","IMDB-BINARY","REDDIT-BINARY"],
         help="nada",
 )
-No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
 parser.add_argument(
     "--model",
     default="CTNet",
@@ -59,17 +58,31 @@ args = parser.parse_args()
 
 
 #Procesing dataset
+No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
 if args.dataset not in GNNBenchmarkDataset.names:
     if args.dataset not in No_Features:
-        print("TODO")
+        if args.dataset =="MUTAG":
+            TRAIN_SPLIT = 150
+            BATCH_SIZE = 32
+            num_of_centers = 17 #mean number of nodes according to PyGeom
+        if args.dataset =="ENZYMES":
+            TRAIN_SPLIT = 500
+            BATCH_SIZE = 32
+            num_of_centers = 32 #mean number of nodes according to PyGeom
+        if args.dataset =="PROTEINES":
+            TRAIN_SPLIT = 1000
+            BATCH_SIZE = 64
+            num_of_centers = 39 #mean number of nodes according to PyGeom
     else:
         dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset)
         if args.dataset =="IMDB-BINARY":
             TRAIN_SPLIT = 800
             BATCH_SIZE = 64
+            num_of_centers = 20 #mean number of nodes according to PyGeom
         elif args.dataset == "REDDIT-BINARY":
             TRAIN_SPLIT = 1500
             BATCH_SIZE = 64
+            num_of_centers = 420 #mean number of nodes according to PyGeom
         else:
             raise Exception("Not dataset in list of datasets")
 else: #GNNBenchmarkDataset
@@ -83,12 +96,11 @@ else: #GNNBenchmarkDataset
     #nothing
 #Procesing model
 
-
-arquitecture = globals()[args.model]
+#arquitecture = globals()[args.model]
 if args.model == 'CTNet':
-    model = arquitecture(dataset.num_features, dataset.num_classes).to(device)
+    model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
 else:
-    model = arquitecture(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
+    model = GAPNet(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
     
 print(model)
 print(TRAIN_SPLIT," ",BATCH_SIZE," " ,dataset.new_num_classes," ",dataset.new_num_features)
@@ -151,11 +163,6 @@ def test(loader):
 print(device)
 
 dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset', name=DATASET) #MNISTo CIFAR10
-data = dataset[0]  # Get the first graph object.
-dataset = dataset.shuffle()
-
-train_dataset = dataset[:TRAIN_SPLIT] #MNIST : 50000 - CIFAR: 40000
-test_dataset = dataset[TRAIN_SPLIT:] 
 
 #torch.autograd.set_detect_anomaly(True)
 ExperimentResult = []
@@ -163,16 +170,16 @@ ExperimentResult = []
 f = open(train_log_file, 'w') #clear file
 f.close()
 for e in range(len(RandList)):
+    dataset = dataset.shuffle()
+    train_dataset = dataset[:TRAIN_SPLIT] #MNIST : 50000 - CIFAR: 40000
+    test_dataset = dataset[TRAIN_SPLIT:] 
     #model = GAPNet(dataset.num_features, dataset.num_classes, derivative=DERIVATIVE, device=device).to(device)
     if args.model == 'CTNet':
-        model = arquitecture(dataset.num_features, dataset.num_classes).to(device)
+        model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
     elif args.model == 'GAPNet':
-        model = arquitecture(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
+        model = GAPNet(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
     else:
         raise Exception("Not model in list of models")
-    #model = CTNet(dataset.num_features, dataset.num_classes).to(device)
-    #model = GAPNet(dataset.new_num_features, dataset.new_num_classes).to(device)
-    #model = NetCT(dataset.new_num_features, dataset.new_num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-4)#
     train_loader = DataLoader(train_dataset.shuffle(), batch_size=BATCH_SIZE, shuffle=True) # Original 64
     test_loader = DataLoader(test_dataset.shuffle(), batch_size=BATCH_SIZE, shuffle=False)  # Original 64
