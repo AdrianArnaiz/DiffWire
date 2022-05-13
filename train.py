@@ -46,8 +46,14 @@ parser.add_argument(
 parser.add_argument(
     "--derivative",
     default="laplacian",
-    choices=["laplacian","normalized"],
+    choices=["laplacian","normalized","normalizedv2"],
     help="nada",
+)
+parser.add_argument(
+    "--cuda",
+    default="cuda:0",
+    choices=["cuda:0","cuda:1"],
+    help="cuda version",
 )
 parser.add_argument(
         "--lr", type=float, default=5e-4, help="Outer learning rate of model"
@@ -105,13 +111,12 @@ else: #GNNBenchmarkDataset
 
 ##################### STATIC Variables #################################
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#device = "cuda:1"
+device = args.cuda
 
 N_EPOCH = 60
 No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
 
-train_log_file = f"TEST_{args.dataset}_{args.model}"
+train_log_file = f"{args.dataset}_{args.model}"
 train_log_file = train_log_file + f"_{args.derivative}" if args.model=="GAPNet" else train_log_file
 train_log_file = train_log_file + f"_{time.strftime('%d_%m_%y__%H_%M')}.txt"
 

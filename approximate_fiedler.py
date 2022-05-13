@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 import time
+
+from ein_utils import _rank3_diag
 EPS=1e-15
 
 def approximate_Fiedler(s, device=None): # torch.Size([20, N, k]) One k for each N of each graph (asume k=2)
@@ -152,3 +154,80 @@ def fiedler_values(adj, fiedlers, device): # adj torch.Size([B, N, N]) fiedlers 
     fiedler_values[b] = N*torch.abs(num/(den + EPS))
 
   return fiedler_values # torch.Size([B])
+
+
+def NLderivative_of_lambda2_wrt_adjacencyV2(adj, d_flat, fiedlers, device): # fiedlers torch.Size([20, N])
+    """
+    Complex derivative
+    Args:
+      adj (_type_): _description_
+      d_flat (_type_): _description_
+      fiedlers (_type_): _description_
+    Returns:
+      _type_: _description_
+    """
+    N = fiedlers.size(1)
+    B = fiedlers.size(0)
+    # Batched structures for the complex derivative
+    d_flat2 = torch.sqrt(d_flat+EPS)[:, None] + EPS # d torch.Size([B, 1, N])
+    d_flat = d_flat2.squeeze(1)
+    #print("first d_flat2 size", d_flat2.size())
+    d_half =  _rank3_diag(d_flat) # d torch.Size([B, N, N])
+    #print("d size", d.size())
+    Ahat = (adj/d_flat2.transpose(1, 2)) # [B, N, N] / [B, N, 1] -> [B, N, N]
+    AhatT = (adj.transpose(1,2)/d_flat2.transpose(1, 2)) # [B, N, N] / [B, N, 1] -> [B, N, N]
+    dinv = 1/(d_flat + EPS)[:, None]
+    dder = -0.5*dinv*d_flat2
+    dder = dder.transpose(1,2) # [B, N, 1]
+    # Storage
+    derivatives = torch.FloatTensor(B, N, N).to(device)
+    for b in range(B):
+      # Eigenvectors
+      u2 = fiedlers[b,:]
+      u2 = u2.unsqueeze(1) # [N, 1]
+      #u2 = u2.to(device) #its already in device because fiedlers is already in device
+      #print("size of u2", u2.size())
+      # First term central: [N,1]x ([1,N]x[N,N]x[N,1]) x [N,1]
+      firstT = torch.matmul(torch.matmul(u2.T, torch.matmul(d_half[b,:,:], AhatT[b,:,:])), u2) # [1,N]x[N,N]x[N,1] -> [1]
+      #print("first term central size", firstT.size())
+      firstT = torch.matmul(torch.matmul(dder[b,:], firstT), torch.ones(N).unsqueeze(0).to(device))
+      #print("first term  size", firstT.size())
+      # Second term
+      secT = torch.matmul(torch.matmul(u2.T, torch.matmul(d_half[b,:,:], Ahat[b,:,:])), u2) # [1,N]x[N,N]x[N,1] -> [1]
+      #print("second term central size", secT.size())
+      secT = torch.matmul(torch.matmul(dder[b,:], secT), torch.ones(N).unsqueeze(0).to(device))
+      # Third term
+      Du2u2TD = torch.matmul(u2,u2.T) # [N,1] x [1,N] -> [N,N]
+      #print("Du2u2T size", u2u2T.size())
+      #print("d_flat2[b,:] size", d_flat2[b,:].size())
+      #Du2u2TD = (u2u2T / d_flat2[b,:]) / d_flat2[b,:].transpose(0, 1)
+      #print("size of Du2u2TD", Du2u2TD.size())
+      # dl2 = torch.matmul(torch.diag(u2u2T),torch.ones(N,N)) - u2u2T ERROR FUNCTIONAL
+      #dl2 = torch.matmul(torch.diag(torch.diag(u2u2T)),torch.ones(N,N)) - u2u2T
+      dl2 = firstT + secT + Du2u2TD
+      # Symmetrize and subtract the diag since it is an undirected graph
+      #dl2 = dl2 + dl2.T - torch.diag(torch.diag(dl2))
+      derivatives[b,:,:] = -dl2
+    return derivatives # derivatives torch.Size([20, N, N])
+
+    
+def NLfiedler_valuesV2(L, d, fiedlers, device): # adj torch.Size([B, N, N]) fiedlers torch.Size([B, N])
+  N = fiedlers.size(1)
+  B = fiedlers.size(0)
+  #print("original fiedlers size", fiedlers.size())
+  #print("d size", d.size())
+  #Laplacians = torch.FloatTensor(B, N, N)
+  fiedler_values = torch.FloatTensor(B).to(device)
+  for b in range(B):
+    f = fiedlers[b,:].unsqueeze(1)
+    num = torch.matmul(f.T,torch.matmul(L[b,:,:],f)) # f is [N,1], L is [N, N], f.T is [1,N] -> Lf is [N,1] -> f.TLf is [1]
+    den = torch.matmul(f.T,torch.matmul(d[b,:,:], f)) # d is [N, N], f is [N,1], f.T is [1,N] -> [1,N] x [N, N] x [N, 1] is [1]
+    fiedler_values[b] = N*torch.abs(num/(den + EPS))
+    """print(f.shape)
+    print(f.T.shape)
+    print(num.shape, num)
+    print(den.shape, den)
+    print((N*torch.abs(num/(den + EPS))).shape)
+    exit()"""
+  return fiedler_values # torch.Size([B])
+

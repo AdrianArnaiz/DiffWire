@@ -3,7 +3,10 @@ import torch
 from torch_geometric.utils import to_dense_batch, to_dense_adj
 from torch_geometric.nn import GCNConv, DenseGraphConv
 from ein_utils import _rank3_diag, _rank3_trace
-from approximate_fiedler import approximate_Fiedler, NLderivative_of_lambda2_wrt_adjacency, NLfiedler_values, derivative_of_lambda2_wrt_adjacency, fiedler_values
+from approximate_fiedler import approximate_Fiedler 
+from approximate_fiedler import NLderivative_of_lambda2_wrt_adjacency, NLfiedler_values 
+from approximate_fiedler import derivative_of_lambda2_wrt_adjacency, fiedler_values
+from approximate_fiedler import NLderivative_of_lambda2_wrt_adjacencyV2, NLfiedler_valuesV2
 EPS = 1e-15
 
 def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, device=None): # x torch.Size([20, 40, 32]) ; mask torch.Size([20, 40]) batch_size=20
@@ -43,9 +46,12 @@ def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, device=None):
         fvalues = fiedler_values(adj, fiedlers, device)
     elif derivative == "normalized":
         #start = time.time()
-        der = NLderivative_of_lambda2_wrt_adjacency(L, d_flat, fiedlers, device)   
+        der = NLderivative_of_lambda2_wrt_adjacency(adj, d_flat, fiedlers, device)   
         fvalues = NLfiedler_values(L, d_flat, fiedlers, device)
         #print('\t\t NLderivative_of_lambda2_wrt_adjacency: {:.6f}s'.format(time.time()- start))
+    elif derivative == "normalizedv2":
+        der = NLderivative_of_lambda2_wrt_adjacencyV2(adj, d_flat, fiedlers, device)   
+        fvalues = NLfiedler_valuesV2(L, d, fiedlers, device)
     
     #der = der.to(device)
     #print("derivative size", der.size())
