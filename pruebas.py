@@ -1,9 +1,7 @@
 from math import ceil
 import os
 import random
-
-from sklearn.model_selection import train_test_split
-from nets import CTNet, GAPNet, MinCutNet
+from nets import CTNet, GAPNet
 import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import GNNBenchmarkDataset, TUDataset
@@ -11,9 +9,9 @@ import torch_geometric.transforms as T
 from transform_features import FeatureDegree
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_dense_batch, to_dense_adj
+from no_features_class import TUDatasetFeatures 
 import time
 import argparse
-import numpy as np
 '''
     Dataset arguments:
         -Name:
@@ -43,7 +41,7 @@ parser.add_argument(
 parser.add_argument(
     "--model",
     default="CTNet",
-    choices=["CTNet","GAPNet","MinCutNet"],
+    choices=["CTNet","GAPNet"],
     help="nada",
 )
 parser.add_argument(
@@ -166,12 +164,12 @@ def train(epoch, loader):
     return loss_all / len(loader.dataset), correct / len(loader.dataset)
 
 @torch.no_grad()
-def test(loader):
-    model.eval()
+def test(modelo, loader):
+    modelo.eval()
     correct = 0
     for data in loader:
         data = data.to(device)
-        pred, mc_loss, o_loss = model(data.x, data.edge_index, data.batch)
+        pred, mc_loss, o_loss = modelo(data.x, data.edge_index, data.batch)
         #print(next(model.parameters()).device)
         #print(data.x.device)
         loss = F.nll_loss(pred, data.y.view(-1)) + mc_loss + o_loss
@@ -196,17 +194,13 @@ for e in range(len(RandList)):
         model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
     elif args.model == 'GAPNet':
         model = GAPNet(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
-    elif args.model == 'MinCutNet':
-        model = MinCutNet(dataset.num_features, dataset.num_classes).to(device)
-    
-    train_indices, test_indices = train_test_split(list(range(len(dataset.data.y))), test_size=0.2, stratify=dataset.data.y,
-                                    random_state=RandList[e], shuffle=True)
-    train_dataset = torch.utils.data.Subset(dataset, train_indices)
-    test_dataset = torch.utils.data.Subset(dataset, test_indices)
-
+    #Da problemas el shuffle con los dataset sin features
+    dataset = dataset.copy().shuffle()
+    train_dataset = dataset[:TRAIN_SPLIT]
+    test_dataset = dataset[TRAIN_SPLIT:] 
     print(len(train_dataset),len(test_dataset))
     #model = GAPNet(dataset.num_features, dataset.num_classes, derivative=DERIVATIVE, device=device).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-4)  #
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-4)#
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True) # Original 64
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)  # Original 64
     #train_dataset = train_dataset.shuffle()
@@ -219,7 +213,7 @@ for e in range(len(RandList)):
         start_time_epoch = time.time()
         train_loss, train_acc = train(epoch, train_loader) # return also train_acc_t if want Accuracy after BATCH
         #_, train_acc = test(train_loader)
-        test_loss, test_acc = test(test_loader)
+        test_loss, test_acc = test(model, test_loader)
         time_lapse = time.time() - start_time_epoch
 
         f = open(args.logs+os.sep+train_log_file, 'a')
@@ -228,9 +222,9 @@ for e in range(len(RandList)):
                 'Test Loss: {:.3f}, Test Acc: {:.3f}'.format(epoch, train_loss,
                                                             train_acc, test_loss,
                                                             test_acc), file=f)
-        print('{} - Epoch: {:03d}, '
+        print('Epoch: {:03d}, '
                 'Train Loss: {:.3f}, Train Acc: {:.3f}, '
-                'Test Loss: {:.3f}, Test Acc: {:.3f}, Time: {:.2f}'.format(exp_name, epoch, train_loss,
+                'Test Loss: {:.3f}, Test Acc: {:.3f}, Time: {:.2f}'.format(epoch, train_loss,
                                                             train_acc, test_loss,
                                                             test_acc, time_lapse))
         f.close()
@@ -243,7 +237,26 @@ for e in range(len(RandList)):
     print('Result of run {:.3f} is {:.3f}'.format(e,test_acc), file=f)
     f.close()
 
+
+
+
+
+
+for e in range(len(RandList)):
+    if args.model == 'CTNet':
+        model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
+    elif args.model == 'GAPNet':
+        model = GAPNet(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
+    model.load_state_dict(torch.load(f"models{os.sep+exp_name}_iter{e}.pth"))
+    #model.eval
+    test_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)  # Original 64
+    loss_test, acc_test = test(model, test_loader)
+    print('Test', loss_test, acc_test)
+
+
+
+
+
 f = open(args.logs+os.sep+train_log_file, 'a')
 print('Test Acc of 10 execs {}'.format(ExperimentResult), file=f)
-print('{} +- {}'.format(np.mean(ExperimentResult), np.std(ExperimentResult)), file=f)
 f.close()
