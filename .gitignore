@@ -130,3 +130,6 @@ dmypy.json
 
 data/
 models/
+*.sh
+!experiments_all.sh
+data_colab/

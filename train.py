@@ -62,6 +62,17 @@ parser.add_argument(
     help="nada",
 )
 parser.add_argument(
+    "--iter",
+    type=int,
+    default=10,
+    help="The number of games to simulate"
+    )
+parser.add_argument(
+    "--logs",
+    default="logs",
+    help="log folders",
+)
+parser.add_argument(
         "--lr", type=float, default=5e-4, help="Outer learning rate of model"
     )
 parser.add_argument(
@@ -80,7 +91,7 @@ if args.dataset not in GNNBenchmarkDataset.names:
             num_of_centers = 17 #mean number of nodes according to PyGeom
         if args.dataset =="ENZYMES": # 600 graphs
             TRAIN_SPLIT = 500
-            BATCH_SIZE = 16
+            BATCH_SIZE = 32
             num_of_centers = 16 #mean number of nodes according to PyGeom
         if args.dataset =="PROTEINS": # 1113 graphs
             TRAIN_SPLIT = 1000
@@ -120,17 +131,17 @@ else: #GNNBenchmarkDataset
 device = args.cuda
 
 N_EPOCH = 60
-No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
 
 exp_name = f"{args.dataset}_{args.model}"
 exp_name = exp_name + f"_{args.derivative}" if args.model=="GAPNet" else exp_name
 train_log_file = exp_name + f"_{time.strftime('%d_%m_%y__%H_%M')}.txt"
 
 RandList = [12345, 42345, 64345, 54345, 74345, 47345, 54321, 14321, 94321, 84328]
+RandList = RandList[:args.iter]
 
-if not os.path.exists("logs/"):
-    os.makedirs("logs")
-if not os.path.exists("models/"):
+if not os.path.exists(args.logs):
+    os.makedirs(args.logs)
+if not os.path.exists("models/") and args.store:
     os.makedirs("models")
 
 ######################################################
@@ -172,7 +183,7 @@ print(device)
 #torch.autograd.set_detect_anomaly(True)
 ExperimentResult = []
 
-f = open("logs/"+os.sep+train_log_file, 'w') #clear file
+f = open(args.logs+os.sep+train_log_file, 'w') #clear file
 print("- M:", args.model, "- D:",dataset,  
         "- Train_split:", TRAIN_SPLIT, "- B:",BATCH_SIZE,
         "- Centers (if CTNet):", num_of_centers, "- LAP (if GAPNet):", args.derivative,
@@ -205,7 +216,7 @@ for e in range(len(RandList)):
         test_loss, test_acc = test(test_loader)
         time_lapse = time.time() - start_time_epoch
 
-        f = open("logs/"+os.sep+train_log_file, 'a')
+        f = open(args.logs+os.sep+train_log_file, 'a')
         print('Epoch: {:03d}, '
                 'Train Loss: {:.3f}, Train Acc: {:.3f}, '
                 'Test Loss: {:.3f}, Test Acc: {:.3f}'.format(epoch, train_loss,
@@ -222,10 +233,10 @@ for e in range(len(RandList)):
         torch.save(model.state_dict(), f"models{os.sep+exp_name}_iter{e}.pth")
 
     ExperimentResult.append(test_acc)
-    f = open("logs/"+os.sep+train_log_file, 'a')
+    f = open(args.logs+os.sep+train_log_file, 'a')
     print('Result of run {:.3f} is {:.3f}'.format(e,test_acc), file=f)
     f.close()
 
-f = open("logs/"+os.sep+train_log_file, 'a')
+f = open(args.logs+os.sep+train_log_file, 'a')
 print('Test Acc of 10 execs {}'.format(ExperimentResult), file=f)
 f.close()
