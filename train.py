@@ -1,6 +1,8 @@
 from math import ceil
 import os
 import random
+
+from sklearn.model_selection import train_test_split
 from nets import CTNet, GAPNet
 import torch
 import torch.nn.functional as F
@@ -9,7 +11,6 @@ import torch_geometric.transforms as T
 from transform_features import FeatureDegree
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_dense_batch, to_dense_adj
-from no_features_class import TUDatasetFeatures 
 import time
 import argparse
 '''
@@ -194,10 +195,12 @@ for e in range(len(RandList)):
         model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
     elif args.model == 'GAPNet':
         model = GAPNet(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
-    #Da problemas el shuffle con los dataset sin features
-    dataset = dataset.copy().shuffle()
-    train_dataset = dataset[:TRAIN_SPLIT]
-    test_dataset = dataset[TRAIN_SPLIT:] 
+    
+    train_indices, test_indices = train_test_split(list(range(len(dataset.data.y))), test_size=0.2, stratify=dataset.data.y,
+                                    random_state=RandList[e], shuffle=True)
+    train_dataset = torch.utils.data.Subset(dataset, train_indices)
+    test_dataset = torch.utils.data.Subset(dataset, test_indices)
+
     print(len(train_dataset),len(test_dataset))
     #model = GAPNet(dataset.num_features, dataset.num_classes, derivative=DERIVATIVE, device=device).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-4)#
