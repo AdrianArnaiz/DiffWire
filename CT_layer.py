@@ -4,9 +4,8 @@
 #from torch_geometric.nn import GCNConv, DenseGraphConv
 import torch
 from ein_utils import _rank3_diag, _rank3_trace
-EPS = 1e-15
 
-def dense_CT_rewiring(x, adj, s, mask=None): # x torch.Size([20, 40, 32]) ; mask torch.Size([20, 40]) batch_size=20
+def dense_CT_rewiring(x, adj, s, mask=None, EPS=1e-15): # x torch.Size([20, 40, 32]) ; mask torch.Size([20, 40]) batch_size=20
     #print("Input x size to mincut pool", x.size())
     x = x.unsqueeze(0) if x.dim() == 2 else x # x torch.Size([20, 40, 32]) if x has not 2 parameters 
     #print("Unsqueezed x size to mincut pool", x.size(), x.dim()) # x.dim() is usually 3

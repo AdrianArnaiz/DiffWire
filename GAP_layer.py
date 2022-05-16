@@ -7,9 +7,8 @@ from approximate_fiedler import approximate_Fiedler
 from approximate_fiedler import NLderivative_of_lambda2_wrt_adjacency, NLfiedler_values 
 from approximate_fiedler import derivative_of_lambda2_wrt_adjacency, fiedler_values
 from approximate_fiedler import NLderivative_of_lambda2_wrt_adjacencyV2, NLfiedler_valuesV2
-EPS = 1e-15
 
-def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, device=None): # x torch.Size([20, 40, 32]) ; mask torch.Size([20, 40]) batch_size=20
+def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, EPS=1e-15, device=None): # x torch.Size([20, 40, 32]) ; mask torch.Size([20, 40]) batch_size=20
     
     k = 2 #We want bipartition to compute spectral gap
     # adj torch.Size([20, N, N]) N=Mmax
@@ -46,19 +45,12 @@ def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, device=None):
         fvalues = fiedler_values(adj, fiedlers, device)
     elif derivative == "normalized":
         #start = time.time()
-        der = NLderivative_of_lambda2_wrt_adjacency(adj, d_flat, fiedlers, device)   
-        fvalues = NLfiedler_values(L, d_flat, fiedlers, device)
+        der = NLderivative_of_lambda2_wrt_adjacency(adj, d_flat, fiedlers, EPS, device)   
+        fvalues = NLfiedler_values(L, d_flat, fiedlers, EPS, device)
         #print('\t\t NLderivative_of_lambda2_wrt_adjacency: {:.6f}s'.format(time.time()- start))
     elif derivative == "normalizedv2":
-        der = NLderivative_of_lambda2_wrt_adjacencyV2(adj, d_flat, fiedlers, device)   
-        fvalues = NLfiedler_valuesV2(L, d, fiedlers, device)
-    
-    #der = der.to(device)
-    #print("derivative size", der.size())
-    #fvalues = fiedler_values(adj, fiedlers)
-    #print("fvalues size", fvalues.size(), fvalues)
-    #fvalues = fvalues.to(device)
-
+        der = NLderivative_of_lambda2_wrt_adjacencyV2(adj, d_flat, fiedlers, EPS, device)   
+        fvalues = NLfiedler_valuesV2(L, d, fiedlers, EPS, device)
 
     mu = 0.01
     lambdaReg = 0.1 
@@ -72,7 +64,7 @@ def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, device=None):
     lambdaReg = 2.0 
     #lambdaReg = 20.0      
     
-    Ac = adj
+    Ac = adj.clone()
     for _ in range(5):
       #fvalues = fiedler_values(Ac, fiedlers)
       #print("Ac size", Ac.size())
@@ -119,7 +111,7 @@ def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, device=None):
     #print("ortho_loss size", ortho_loss.size()) # [20] one sum over each graph
     ortho_loss = torch.mean(ortho_loss) 
     
-    # Fix and normalize coarsened adjacency matrix.
+    """# Fix and normalize coarsened adjacency matrix.
     ind = torch.arange(k, device=out_adj.device) # range e.g. from 0 to 15 (k=16)
     # out_adj is [20, k, k]
     out_adj[:, ind, ind] = 0 # [20, k, k]  the diagnonal will be 0 now: Ahat = Apool - I_k*diag(Apool) (Eq. 8)
@@ -128,11 +120,11 @@ def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, device=None):
     # Final degree matrix and normalization of out_adj: Ahatpool = Dhat^{-1/2}AhatD^{-1/2} (Eq. 8)
     d = torch.einsum('ijk->ij', out_adj) #d torch.Size([20, k])
     #print("d size", d.size())
-    d = torch.sqrt(d)[:, None] + EPS # d torch.Size([20, 1, k])
+    d = torch.sqrt(d)[:, None] + EP S # d torch.Size([20, 1, k])
     #print("sqrt(d) size", d.size())
     #print( (out_adj / d).shape)  # out_adj is [20, k, k] and d is [20, 1, k] -> torch.Size([20, k, k]) 
     out_adj = (out_adj / d) / d.transpose(1, 2) # ([20, k, k] / [20, k, 1] ) -> [20, k, k]
     # out_adj torch.Size([20, k, k]) 
-    #print("out_adj size", out_adj.size())
+    #print("out_adj size", out_adj.size())"""
     return  Ac, mincut_loss, ortho_loss # [20, k, 32], [20, k, k], [1], [1]
     #return out, out_adj, mincut_loss, ortho_loss # [20, k, 32], [20, k, k], [1], [1]

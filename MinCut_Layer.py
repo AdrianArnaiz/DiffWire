@@ -2,9 +2,8 @@ import torch
 from torch_geometric.utils import to_dense_batch, to_dense_adj
 from torch_geometric.nn import GCNConv, DenseGraphConv
 from ein_utils import _rank3_diag, _rank3_trace
-EPS = 1e-15
 
-def dense_mincut_pool(x, adj, s, mask=None): # x torch.Size([20, 40, 32]) ; mask torch.Size([20, 40]) batch_size=20
+def dense_mincut_pool(x, adj, s, mask=None, EPS=1e-15): # x torch.Size([20, 40, 32]) ; mask torch.Size([20, 40]) batch_size=20
     #print("Input x size to mincut pool", x.size())
     x = x.unsqueeze(0) if x.dim() == 2 else x # x torch.Size([20, 40, 32]) if x has not 2 parameters 
     #print("Unsqueezed x size to mincut pool", x.size(), x.dim()) # x.dim() is usually 3
@@ -42,7 +41,7 @@ def dense_mincut_pool(x, adj, s, mask=None): # x torch.Size([20, 40, 32]) ; mask
     # MinCUT regularization.
     mincut_num = _rank3_trace(out_adj) # mincut_num torch.Size([20]) one sum over each graph
     #print("mincut_num size", mincut_num.size())
-    d_flat = torch.einsum('ijk->ij', adj) # torch.Size([20, N]) 
+    d_flat = torch.einsum('ijk->ij', adj) + EPS # torch.Size([20, N]) 
     #print("d_flat size", d_flat.size())
     d = _rank3_diag(d_flat) # d torch.Size([20, N, N]) 
     #print("d size", d.size())
