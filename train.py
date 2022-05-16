@@ -136,7 +136,8 @@ N_EPOCH = 60
 
 exp_name = f"{args.dataset}_{args.model}"
 exp_name = exp_name + f"_{args.derivative}" if args.model=="GAPNet" else exp_name
-train_log_file = exp_name + f"_{time.strftime('%d_%m_%y__%H_%M')}.txt"
+exp_time = time.strftime('%d_%m_%y__%H_%M')
+train_log_file = exp_name + f"_{exp_time}.txt"
 
 RandList = [12345, 42345, 64345, 54345, 74345, 47345, 54321, 14321, 94321, 84328]
 RandList = RandList[:args.iter]
@@ -236,7 +237,8 @@ for e in range(len(RandList)):
         f.close()
 
     if args.store:
-        torch.save(model.state_dict(), f"models{os.sep+exp_name}_iter{e}.pth")
+        torch.save(model.state_dict(), f"models{os.sep}{exp_name}_{exp_time}_iter{e}.pth")
+        print(f"Model saved in models{os.sep}{exp_name}_{exp_time}_iter{e}.pth")
 
     ExperimentResult.append(test_acc)
     f = open(args.logs+os.sep+train_log_file, 'a')
