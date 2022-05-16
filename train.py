@@ -8,7 +8,7 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import GNNBenchmarkDataset, TUDataset
 import torch_geometric.transforms as T
-from transform_features import FeatureDegree
+from transform_features import FeatureDegree, DIGLedges
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_dense_batch, to_dense_adj
 import time
@@ -59,6 +59,12 @@ parser.add_argument(
     help="cuda version",
 )
 parser.add_argument(
+    "--prepro",
+    default=None,
+    choices=[None,"digl"],
+    help="digl preprocessing",
+)
+parser.add_argument(
     "--store",
     action="store_true",
     help="nada",
@@ -84,9 +90,12 @@ args = parser.parse_args()
 
 #Procesing dataset
 No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
+preprocessing = DIGLedges(alpha=0.1, eps=0.0005) if args.prepro == "digl" else None
+aux_digl_foler = "/DIGL" if args.prepro == "digl" else ""
+
 if args.dataset not in GNNBenchmarkDataset.names:
     if args.dataset not in No_Features:
-        dataset = TUDataset(root='data/TUDataset', name=args.dataset)
+        dataset = TUDataset(root='data/TUDataset'+aux_digl_foler, name=args.dataset, transform=preprocessing)
         if args.dataset =="MUTAG": # 188 graphs
             TRAIN_SPLIT = 150
             BATCH_SIZE = 32
@@ -101,7 +110,7 @@ if args.dataset not in GNNBenchmarkDataset.names:
             num_of_centers = 39 #mean number of nodes according to PyGeom
     else:
         #datasetGNN = TUDataset(root='data/TUDataset', name=args.dataset)
-        dataset = TUDataset(root='data/TUDataset',name=args.dataset, pre_transform=FeatureDegree(), use_node_attr=True)
+        dataset = TUDataset(root='data/TUDataset'+aux_digl_foler,name=args.dataset, pre_transform=FeatureDegree(), use_node_attr=True, transform=preprocessing)
         #dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset, dataset=datasetGNN)        
         if args.dataset =="IMDB-BINARY": # 1000 graphs
             TRAIN_SPLIT = 800
@@ -118,7 +127,7 @@ if args.dataset not in GNNBenchmarkDataset.names:
         else:
             raise Exception("Not dataset in list of datasets")
 else: #GNNBenchmarkDataset
-    dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset', name=args.dataset) #MNISTo CIFAR10
+    dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset'+aux_digl_foler, name=args.dataset, transform=preprocessing) #MNISTo CIFAR10
     if args.dataset =="MNIST":
         TRAIN_SPLIT = 50000
         BATCH_SIZE = 100
@@ -135,6 +144,7 @@ device = args.cuda
 N_EPOCH = 60
 
 exp_name = f"{args.dataset}_{args.model}"
+exp_name = exp_name+"DIGL" if args.prepro=="digl" else exp_name
 exp_name = exp_name + f"_{args.derivative}" if args.model=="GAPNet" else exp_name
 exp_time = time.strftime('%d_%m_%y__%H_%M')
 train_log_file = exp_name + f"_{exp_time}.txt"
@@ -192,7 +202,7 @@ print("- M:", args.model, "- D:",dataset,
         "- Centers (if CTNet):", num_of_centers, "- LAP (if GAPNet):", args.derivative,
         "- Classes" ,dataset.num_classes,"- Feats",dataset.num_features, file=f)
 f.close()
-EPS=15
+EPS=1e-15
 for e in range(len(RandList)):
     if args.model == 'CTNet':
         model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers, EPS=EPS).to(device)

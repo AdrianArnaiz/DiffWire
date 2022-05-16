@@ -42,7 +42,7 @@ def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, EPS=1e-15, de
     # Recalculate
     if derivative == "laplacian":
         der = derivative_of_lambda2_wrt_adjacency(fiedlers, device)
-        fvalues = fiedler_values(adj, fiedlers, device)
+        fvalues = fiedler_values(adj, fiedlers, EPS, device)
     elif derivative == "normalized":
         #start = time.time()
         der = NLderivative_of_lambda2_wrt_adjacency(adj, d_flat, fiedlers, EPS, device)   
