@@ -9,10 +9,11 @@ from CT_layer import dense_CT_rewiring
 from MinCut_Layer import dense_mincut_pool
 
 class GAPNet(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, hidden_channels=32, derivative=None, device=None):
+    def __init__(self, in_channels, out_channels, hidden_channels=32, derivative=None, EPS=1e-15, device=None):
         super(GAPNet, self).__init__()
         self.device = device
         self.derivative = derivative
+        self.EPS = EPS
         # GCN Layer - MLP - Dense GCN Layer
         #self.conv1 = GCNConv(in_channels, hidden_channels)
         self.conv1 = DenseGraphConv(hidden_channels, hidden_channels)
@@ -61,7 +62,7 @@ class GAPNet(torch.nn.Module):
         
         # REWIRING
         #start = time.time()
-        adj, mincut_loss1, ortho_loss1 = dense_mincut_rewiring(x, adj, s1, mask, derivative = self.derivative, device=self.device) # out: x torch.Size([20, N, F'=32]),  adj torch.Size([20, N, N])
+        adj, mincut_loss1, ortho_loss1 = dense_mincut_rewiring(x, adj, s1, mask, derivative = self.derivative, EPS=self.EPS, device=self.device) # out: x torch.Size([20, N, F'=32]),  adj torch.Size([20, N, N])
         #print('\t\tdense_mincut_rewiring: {:.6f}s'.format(time.time()- start))
         #print("x",x)
         #print("adj",adj)
@@ -85,7 +86,7 @@ class GAPNet(torch.nn.Module):
         # MINCUT_POOL
         # Call to dense_cut_mincut_pool to get coarsened x, adj and the losses: k=16
         #x, adj, mincut_loss1, ortho_loss1 = dense_mincut_rewiring(x, adj, s1, mask) # x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
-        x, adj, mincut_loss2, ortho_loss2 = dense_mincut_pool(x, adj, s2, mask) # out x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
+        x, adj, mincut_loss2, ortho_loss2 = dense_mincut_pool(x, adj, s2, mask, EPS=self.EPS) # out x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
         #print("lossses2",mincut_loss2, ortho_loss2)
         #print("mincut pool x", x)
         #print("mincut pool adj", adj)
@@ -116,8 +117,9 @@ class GAPNet(torch.nn.Module):
 
 
 class CTNet(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, k_centers, hidden_channels=32):
+    def __init__(self, in_channels, out_channels, k_centers, hidden_channels=32, EPS=1e-15):
         super(CTNet, self).__init__()
+        self.EPS=EPS
         # GCN Layer - MLP - Dense GCN Layer
         #self.conv1 = GCNConv(in_channels, hidden_channels)
         self.conv1 = DenseGraphConv(hidden_channels, hidden_channels)
@@ -136,7 +138,7 @@ class CTNet(torch.nn.Module):
  
 
     def forward(self, x, edge_index, batch):    # x torch.Size([N, N]),  data.batch  torch.Size([661])  
-    
+        print()
         # Make all adjacencies of size NxN 
         adj = to_dense_adj(edge_index, batch)   # adj torch.Size(B, N, N])
         #print("adj_size", adj.size())
@@ -159,9 +161,11 @@ class CTNet(torch.nn.Module):
           print("adj nan")
         if torch.isnan(x).any():
           print("x nan")
+          exit()
         
         # CT REWIRING
-        adj, CT_loss, ortho_loss1 = dense_CT_rewiring(x, adj, s1, mask) # out: x torch.Size([20, N, F'=32]),  adj torch.Size([20, N, N])
+        adj, CT_loss, ortho_loss1 = dense_CT_rewiring(x, adj, s1, mask, EPS = self.EPS) # out: x torch.Size([20, N, F'=32]),  adj torch.Size([20, N, N])
+        
         #print("CT_loss, ortho_loss1", CT_loss, ortho_loss1)
         #print("x",x)
         #print("adj",adj)
@@ -185,7 +189,7 @@ class CTNet(torch.nn.Module):
         # MINCUT_POOL
         # Call to dense_cut_mincut_pool to get coarsened x, adj and the losses: k=16
         #x, adj, mincut_loss1, ortho_loss1 = dense_mincut_rewiring(x, adj, s1, mask) # x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
-        x, adj, mincut_loss2, ortho_loss2 = dense_mincut_pool(x, adj, s2, mask) # out x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
+        x, adj, mincut_loss2, ortho_loss2 = dense_mincut_pool(x, adj, s2, mask, EPS=self.EPS) # out x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
         #print("lossses2",mincut_loss2, ortho_loss2)
         #print("mincut pool x", x)
         #print("mincut pool adj", adj)
@@ -208,7 +212,8 @@ class CTNet(torch.nn.Module):
         #print("final x1 size", x.size())
         x = self.lin3(x) #x torch.Size([20, 2])
         #print("final x2 size", x.size())
-        #print("losses: ", CT_loss, ortho_loss1, mincut_loss2, ortho_loss2)
+        print("CT losses: ", CT_loss, ortho_loss1)
+        print("MC losses: ", mincut_loss2, ortho_loss2)
         CT_loss = CT_loss + ortho_loss1
         mincut_loss = mincut_loss2 + ortho_loss2
         #print("x", x)
@@ -216,8 +221,9 @@ class CTNet(torch.nn.Module):
 
 
 class MinCutNet(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, hidden_channels=32):
+    def __init__(self, in_channels, out_channels, hidden_channels=32, EPS=1e-15):
         super(MinCutNet, self).__init__()
+        self.EPS=EPS
         # GCN Layer - MLP - Dense GCN Layer
         self.conv1 = DenseGraphConv(hidden_channels, hidden_channels)
         self.conv2 = DenseGraphConv(hidden_channels, hidden_channels)
@@ -254,7 +260,7 @@ class MinCutNet(torch.nn.Module):
 
         # MINCUT_POOL
         # Call to dense_cut_mincut_pool to get coarsened x, adj and the losses: k=16
-        x, adj, mincut_loss2, ortho_loss2 = dense_mincut_pool(x, adj, s2, mask) # out x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
+        x, adj, mincut_loss2, ortho_loss2 = dense_mincut_pool(x, adj, s2, mask, EPS=self.EPS) # out x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
         
         # CONV2: Now on coarsened x and adj: 
         x = self.conv2(x, adj) #out x torch.Size([20, 16, 32])

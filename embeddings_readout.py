@@ -18,7 +18,7 @@ SAVE_PATH = "figs/REDDIT_READOUT"
 
 ###### Datasets with same parameters and order thatn in training.
 dataset = TUDataset(root='data_colab/TUDataset',name="REDDIT-BINARY", pre_transform=FeatureDegree(), use_node_attr=True)
-BATCH_SIZE = 16 #64 REDDIT - dependeing on memory
+BATCH_SIZE = 64 #REDDIT - dependeing on memory
 num_of_centers = 420
 
 #Same order than training

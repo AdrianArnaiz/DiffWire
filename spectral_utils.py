@@ -1,7 +1,5 @@
 import torch
-EPS = 1e-15
-from torch_geometric.utils import get_laplacian
-from torch_geometric.utils import to_dense_batch, to_dense_adj
+from torch_geometric.utils import to_dense_adj
 
 def unnormalized_laplacian_eigenvectors(L): # 
   el, ev = torch.linalg.eig(L)

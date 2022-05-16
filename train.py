@@ -192,9 +192,10 @@ print("- M:", args.model, "- D:",dataset,
         "- Centers (if CTNet):", num_of_centers, "- LAP (if GAPNet):", args.derivative,
         "- Classes" ,dataset.num_classes,"- Feats",dataset.num_features, file=f)
 f.close()
+EPS=15
 for e in range(len(RandList)):
     if args.model == 'CTNet':
-        model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
+        model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers, EPS=EPS).to(device)
     elif args.model == 'GAPNet':
         model = GAPNet(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
     elif args.model == 'MinCutNet':

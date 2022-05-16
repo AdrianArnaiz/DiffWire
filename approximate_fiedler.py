@@ -3,7 +3,6 @@ import numpy as np
 import time
 
 from ein_utils import _rank3_diag
-EPS=1e-15
 
 def approximate_Fiedler(s, device=None): # torch.Size([20, N, k]) One k for each N of each graph (asume k=2)
   """
@@ -18,7 +17,7 @@ def approximate_Fiedler(s, device=None): # torch.Size([20, N, k]) One k for each
   trimmed_s[maxcluster==0] = 1/np.sqrt(float(s_1))  
   return trimmed_s
 
-def NLderivative_of_lambda2_wrt_adjacency(adj, d_flat, fiedlers, device): # fiedlers torch.Size([20, N])
+def NLderivative_of_lambda2_wrt_adjacency(adj, d_flat, fiedlers, EPS, device): # fiedlers torch.Size([20, N])
   """
   Complex derivative
 
@@ -74,7 +73,7 @@ def NLderivative_of_lambda2_wrt_adjacency(adj, d_flat, fiedlers, device): # fied
     derivatives[b,:,:] = -dl2
   return derivatives # derivatives torch.Size([20, N, N])
 
-def NLfiedler_values(L, d_flat, fiedlers, device): # adj torch.Size([B, N, N]) fiedlers torch.Size([B, N])
+def NLfiedler_values(L, d_flat, fiedlers, EPS, device): # adj torch.Size([B, N, N]) fiedlers torch.Size([B, N])
   N = fiedlers.size(1)
   B = fiedlers.size(0)
   #print("original fiedlers size", fiedlers.size())
@@ -125,7 +124,7 @@ def derivative_of_lambda2_wrt_adjacency(fiedlers, device): # fiedlers torch.Size
     
   return derivatives # derivatives torch.Size([20, N, N])
 
-def fiedler_values(adj, fiedlers, device): # adj torch.Size([B, N, N]) fiedlers torch.Size([B, N])
+def fiedler_values(adj, fiedlers, EPS, device): # adj torch.Size([B, N, N]) fiedlers torch.Size([B, N])
   N = fiedlers.size(1)
   B = fiedlers.size(0)
   #Laplacians = torch.FloatTensor(B, N, N)
@@ -156,7 +155,7 @@ def fiedler_values(adj, fiedlers, device): # adj torch.Size([B, N, N]) fiedlers 
   return fiedler_values # torch.Size([B])
 
 
-def NLderivative_of_lambda2_wrt_adjacencyV2(adj, d_flat, fiedlers, device): # fiedlers torch.Size([20, N])
+def NLderivative_of_lambda2_wrt_adjacencyV2(adj, d_flat, fiedlers, EPS, device): # fiedlers torch.Size([20, N])
     """
     Complex derivative
     Args:
@@ -211,7 +210,7 @@ def NLderivative_of_lambda2_wrt_adjacencyV2(adj, d_flat, fiedlers, device): # fi
     return derivatives # derivatives torch.Size([20, N, N])
 
     
-def NLfiedler_valuesV2(L, d, fiedlers, device): # adj torch.Size([B, N, N]) fiedlers torch.Size([B, N])
+def NLfiedler_valuesV2(L, d, fiedlers, EPS, device): # adj torch.Size([B, N, N]) fiedlers torch.Size([B, N])
   N = fiedlers.size(1)
   B = fiedlers.size(0)
   #print("original fiedlers size", fiedlers.size())
