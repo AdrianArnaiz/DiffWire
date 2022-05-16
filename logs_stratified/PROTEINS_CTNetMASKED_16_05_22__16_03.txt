@@ -1,0 +1,9 @@
+- M: CTNet - D: PROTEINS(1113) - Train_split: 1000 - B: 64 - Centers (if CTNet): 39 - LAP (if GAPNet): laplacian - Classes 2 - Feats 3
+Epoch: 001, Train Loss: 51.356, Train Acc: 0.535, Test Loss: 35.953, Test Acc: 0.700
+Epoch: 002, Train Loss: 50.840, Train Acc: 0.640, Test Loss: 35.963, Test Acc: 0.682
+Epoch: 003, Train Loss: 50.807, Train Acc: 0.604, Test Loss: 35.984, Test Acc: 0.596
+Epoch: 004, Train Loss: 50.734, Train Acc: 0.685, Test Loss: 35.911, Test Acc: 0.691
+Epoch: 005, Train Loss: 50.736, Train Acc: 0.700, Test Loss: 35.929, Test Acc: 0.740
+Epoch: 006, Train Loss: 50.715, Train Acc: 0.720, Test Loss: 35.922, Test Acc: 0.735
+Epoch: 007, Train Loss: 50.708, Train Acc: 0.746, Test Loss: 35.907, Test Acc: 0.691
+Epoch: 008, Train Loss: 50.717, Train Acc: 0.708, Test Loss: 35.919, Test Acc: 0.744

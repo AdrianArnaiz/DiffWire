@@ -83,8 +83,8 @@ def dense_CT_rewiring(x, adj, s, mask=None): # x torch.Size([20, 40, 32]) ; mask
     #print("R_dist",CT_dist)
 
     # Mask with adjacency if proceeds 
-    #adj = CT_dist*adj
-    adj = CT_dist
+    adj = CT_dist*adj
+    #adj = CT_dist
     
     # Losses
     CT_loss = CT_num / CT_den
