@@ -77,9 +77,18 @@ def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, EPS=1e-15, de
       # Clipping: negatives to 0, positives to 1 
       #print("Ac is", Ac, Ac.size())
       #Ac = torch.clamp(Ac, min=0.0, max=1.0)
-      Ac = Ac*adj
+      
+      #print("Esta es la antigua adj",adj)
+      #print("Esta es la antigua Ac",Ac)
+      
+      #print("Despues mask Ac",Ac)
+      #print("Despues mask Adj",adj)
+      #print("Mayores que 0",(Ac>0).sum()) #20,16,40
+      #print("Menores que 0",(Ac<=0).sum()) 
       Ac = torch.softmax(Ac, dim=-1)
+      Ac = Ac*adj
     #print("Min Fiedlers",min(fvalues))
+    #print("NUeva salida",Ac)
     
     # out_adj: this tensor contains Apool = S.T*A*S so that we can take its trace and retain coarsened adjacency (Eq. 7)
     out_adj = torch.matmul(torch.matmul(s.transpose(1, 2), adj), s) #[20, k, N]*[20, N, N]-> [20, k ,N]*[20, N, k] = [20, k, k] 20 graphs of k nodes
