@@ -271,3 +271,83 @@ class MinCutNet(torch.nn.Module):
         mincut_loss = mincut_loss2 + ortho_loss2
         #print("x", x)
         return F.log_softmax(x, dim=-1), mincut_loss2, ortho_loss2
+
+
+class DiffWire(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, k_centers, derivative=None, hidden_channels=32, EPS=1e-15, device=None):
+        super(DiffWire, self).__init__()
+
+        self.EPS=EPS
+        self.derivative = derivative
+        self.device=device
+
+        # First X transformation
+        self.lin1 = Linear(in_channels, hidden_channels)
+    
+        #Fiedler vector -- Pool previous to GAP-Layer
+        self.pool_rw = Linear(hidden_channels, 2)
+
+        #CT Embedding -- Pool previous to CT-Layer
+        num_of_centers1 =  k_centers # k1 - order of number of nodes
+        self.pool_ct = Linear(hidden_channels, num_of_centers1) #CT
+
+        #Conv1
+        self.conv1 = DenseGraphConv(hidden_channels, hidden_channels)
+
+        #MinCutPooling
+        self.pool_mc = Linear(hidden_channels, 16) #MC
+
+        #Conv2
+        self.conv2 = DenseGraphConv(hidden_channels, hidden_channels)
+
+        # MLPs towards out
+        self.lin2 = Linear(hidden_channels, hidden_channels)
+        self.lin3 = Linear(hidden_channels, out_channels)
+ 
+
+    def forward(self, x, edge_index, batch):
+        # Make all adjacencies of size NxN 
+        adj = to_dense_adj(edge_index, batch)
+        # Make all x_i of size N=MAX(N1,...,N20), e.g. N=40: 
+        x, mask = to_dense_batch(x, batch)
+
+        x = self.lin1(x)
+
+        if torch.isnan(adj).any():
+          print("adj nan")
+        if torch.isnan(x).any():
+          print("x nan")
+        
+        #Gap Layer RW
+        s0  = self.pool_rw(x)
+        adj, mincut_loss_rw, ortho_loss_rw = dense_mincut_rewiring(x, adj, s0, mask, 
+                                              derivative = self.derivative, EPS=self.EPS, device=self.device)
+
+        # CT REWIRING
+        # First mincut pool for computing Fiedler adn rewire 
+        s1  = self.pool_ct(x)
+        adj, CT_loss, ortho_loss_ct = dense_CT_rewiring(x, adj, s1, mask, EPS = self.EPS) # out: x torch.Size([20, N, F'=32]),  adj torch.Size([20, N, N])
+
+        # CONV1: Now on x and rewired adj: 
+        x = self.conv1(x, adj)
+        
+        # MINCUT_POOL
+        # MLP of k=16 outputs s
+        s2 = self.pool_mc(x) 
+        # Call to dense_cut_mincut_pool to get coarsened x, adj and the losses: k=16
+        x, adj, mincut_loss, ortho_loss_mc = dense_mincut_pool(x, adj, s2, mask, EPS=self.EPS) # out x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
+
+        # CONV2: Now on coarsened x and adj: 
+        x = self.conv2(x, adj) 
+        
+        # Readout for each of the 20 graphs
+        x = x.sum(dim=1) 
+        # Final MLP for graph classification: hidden channels = 32
+        x = F.relu(self.lin2(x)) 
+        x = self.lin3(x) 
+
+
+        main_loss = mincut_loss_rw + CT_loss + mincut_loss
+        ortho_loss = ortho_loss_rw + ortho_loss_ct + ortho_loss_mc
+        #print("x", x)
+        return F.log_softmax(x, dim=-1), main_loss, ortho_loss
