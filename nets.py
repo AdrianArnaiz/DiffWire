@@ -138,7 +138,6 @@ class CTNet(torch.nn.Module):
  
 
     def forward(self, x, edge_index, batch):    # x torch.Size([N, N]),  data.batch  torch.Size([661])  
-        print()
         # Make all adjacencies of size NxN 
         adj = to_dense_adj(edge_index, batch)   # adj torch.Size(B, N, N])
         #print("adj_size", adj.size())
@@ -161,7 +160,6 @@ class CTNet(torch.nn.Module):
           print("adj nan")
         if torch.isnan(x).any():
           print("x nan")
-          exit()
         
         # CT REWIRING
         adj, CT_loss, ortho_loss1 = dense_CT_rewiring(x, adj, s1, mask, EPS = self.EPS) # out: x torch.Size([20, N, F'=32]),  adj torch.Size([20, N, N])
@@ -212,8 +210,6 @@ class CTNet(torch.nn.Module):
         #print("final x1 size", x.size())
         x = self.lin3(x) #x torch.Size([20, 2])
         #print("final x2 size", x.size())
-        print("CT losses: ", CT_loss, ortho_loss1)
-        print("MC losses: ", mincut_loss2, ortho_loss2)
         CT_loss = CT_loss + ortho_loss1
         mincut_loss = mincut_loss2 + ortho_loss2
         #print("x", x)
