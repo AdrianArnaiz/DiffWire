@@ -5,15 +5,29 @@ import torch.nn.functional as F
 from torch_geometric.loader import DataLoader
 from transform_features import FeatureDegree
 from torch_geometric.datasets import TUDataset, GNNBenchmarkDataset
-from embeddings_readout_utils import CTNet_readout_embedding, test_readout_embedd, print_readout_embeddings
+from embeddings_readout_utils import CTNet_readout_embedding, GAPNet_readout_embedding, MinCutNet_readout_embedding
+from embeddings_readout_utils import print_diff_readout_embeddings, test_readout_embedd, print_readout_embeddings
 import numpy as np
+import time 
 
 ###################
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = "cuda:1"
+
 print(device)
-modelito = None # CT, Gap, MC
-dataset = None #REDDIT, MUTAG
-SAVE_PATH = "figs/REDDIT_READOUT"
+
+model_family = 'GAP' # CT, GAP, MinCut
+model_path = "trained_models/REDDIT-BINARY_GAPNet_laplacian_16_05_22__11_04_iter0.pth"
+#model_family = 'MinCut' # CT, GAP, MinCut
+#model_path = "trained_models/REDDIT-BINARY_MinCutNet_16_05_22__11_05_iter0.pth"
+#model_family = 'CT' # CT, GAP, MinCut
+#model_path = "trained_models/REDDIT-BINARY_CTNet_17_05_22__08_50_iter0.pth"
+
+dataset = 'REDDIT' #REDDIT, COLLAB, IMDB
+
+SAVE_PATH = "figs/"+model_family+'Lap_'+dataset+"_READOUT_"+time.strftime('%d_%m_%y__%H_%M')
+
+fig_style = 'wrong_pred' #["real_predicted",  "wrong_pred"]
 ####################
 
 ###### Datasets with same parameters and order thatn in training.
@@ -31,8 +45,18 @@ loader =  DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)
 print(dataset)
 
 ###### Model that throws readout embeddings
-model =  CTNet_readout_embedding(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
-model.load_state_dict(torch.load("models/REDDIT-BINARY_CTNet_iter0.pth", map_location=torch.device(device)))
+
+if model_family=='CT':
+    model =  CTNet_readout_embedding(dataset.num_features, dataset.num_classes, k_centers=num_of_centers).to(device)
+elif model_family == 'MinCut':
+    model =  MinCutNet_readout_embedding(dataset.num_features, dataset.num_classes).to(device)
+elif model_family == 'GAP':
+    model = GAPNet_readout_embedding(dataset.num_features, dataset.num_classes, derivative='laplacian', device=device).to(device)
+else:
+    raise Exception("Not implemented method")
+
+
+model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
 model.eval()
 
 """model =  GAPNet(dataset.num_features, dataset.num_classes, derivative="laplacian",device=device).to(device)
@@ -56,5 +80,10 @@ lab_test  = l[test_indices]
 pred_train = p[train_indices]
 pred_test  = p[test_indices]
 
-print_readout_embeddings(e_train, e_test, lab_train, lab_test, pred_train, pred_test, len(set(l)), save_path=SAVE_PATH)
+if fig_style == "real_predicted":
+    print_readout_embeddings(e_train, e_test, lab_train, lab_test, pred_train, pred_test, len(set(l)), 
+                            save_path=SAVE_PATH, title=model_family)
+elif fig_style == "wrong_pred":
+    print_diff_readout_embeddings(e_train, e_test, lab_train, lab_test, pred_train, pred_test, len(set(l)), 
+                            save_path=SAVE_PATH, title=model_family)
 

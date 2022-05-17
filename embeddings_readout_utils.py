@@ -38,47 +38,97 @@ def test_readout_embedd(modelo, loader, device):
 
 
 def print_readout_embeddings(train_embedd, test_embedd, train_labels, test_labels, train_pred, test_pred, num_categories, save_path):
-    
+    plt.rcParams["font.family"] = 'serif'
+    plt.rcParams['font.size'] = '14'
+
     train_embedd = np.array(train_embedd)
     train_labels = np.array(train_labels)
     test_embedd = np.array(test_embedd)
     test_labels = np.array(test_labels)
 
-    tsne = TSNE(n_components=2, verbose=0, perplexity=80, learning_rate=800)
+    tsne = TSNE(n_components=2, verbose=0, perplexity=40, learning_rate=200)
     tsne_results = tsne.fit_transform(np.vstack([train_embedd,test_embedd]))
     
     train_embedd_2dim = tsne_results[:len(train_embedd)]
     test_embedd_2dim = tsne_results[len(train_embedd):]
 
-    cmap = cm.get_cmap('Set2')
-    fig, ax = plt.subplots(1, 2, figsize=(17,8))
+    cmap = cm.get_cmap('seismic')
+    fig, ax = plt.subplots(1, 2, figsize=(19,9))
 
-    for lab in range(num_categories):
+    for lab in range(num_categories): #Real label
         train_indices_lab = train_labels == lab
         test_indices_lab = test_labels == lab
         
         ax[0].scatter(train_embedd_2dim[train_indices_lab,0], train_embedd_2dim[train_indices_lab,1],
-                   c=np.array(cmap(lab)).reshape(1,4), label = f"{lab}_train" ,alpha=0.5, marker ='o')
-        #ax[0].scatter(test_embedd_2dim[test_indices_lab,0], test_embedd_2dim[test_indices_lab,1],
-        #           c=np.array(cmap(lab)).reshape(1,4), label = f"{lab}_test" ,alpha=0.5, marker ='x')
+                   c=np.array(cmap(64+lab*128)).reshape(1,4), label = f"{lab}_train" ,alpha=0.2, marker ='.')
+        ax[0].scatter(test_embedd_2dim[test_indices_lab,0], test_embedd_2dim[test_indices_lab,1],
+                   c=np.array(cmap(64+lab*128)).reshape(1,4), label = f"{lab}_test" ,alpha=0.6, marker ='x')
         ax[0].set_title('Real Label')
+        ax[0].legend(fontsize='large', markerscale=2)
+        ax[0].tick_params(left = False, right = False , labelleft = False ,
+                labelbottom = False, bottom = False)
         
-    for lab in range(num_categories):
+    for lab in range(num_categories): # Predicted
         train_indices_pred = train_pred == lab
         test_indices_pred = test_pred == lab
         
         acc_test = (np.sum(test_pred == test_labels)/len(test_labels))*100
         acc_train = (np.sum(train_pred == train_labels)/len(train_pred))*100
         
-        #ax[1].scatter(train_embedd_2dim[train_indices_pred,0], train_embedd_2dim[train_indices_pred,1],
-        #           c=np.array(cmap(lab)).reshape(1,4), label = f"{lab}_train" ,alpha=0.5, marker ='o')
+        ax[1].scatter(train_embedd_2dim[train_indices_pred,0], train_embedd_2dim[train_indices_pred,1],
+                   c=np.array(cmap(64+lab*128)).reshape(1,4), label = f"{lab}_train" ,alpha=0.2, marker ='.')
         ax[1].scatter(test_embedd_2dim[test_indices_pred,0], test_embedd_2dim[test_indices_pred,1],
-                   c=np.array(cmap(lab)).reshape(1,4), label = f"{lab}_test" ,alpha=0.5, marker ='x')
+                   c=np.array(cmap(64+lab*128)).reshape(1,4), label = f"{lab}_test" ,alpha=0.6, marker ='x')
         ax[1].set_title(f'Predicted\n$Acc_{{train}}={acc_train:.1f}$ - $Acc_{{test}}={acc_test:.1f}$')
 
         ax[1].legend(fontsize='large', markerscale=2)
-    plt.savefig(f"""{save_path}.jpg""")
+        ax[1].tick_params(left = False, right = False , labelleft = False ,
+                labelbottom = False, bottom = False)
 
+    plt.savefig(f"""{save_path}.jpg""", dpi=600, bbox_inches='tight')
+
+
+def print_diff_readout_embeddings(train_embedd, test_embedd, train_labels, test_labels, train_pred, test_pred, num_categories, save_path, title=""):
+    plt.rcParams["font.family"] = 'serif'
+    plt.rcParams['font.size'] = '14'
+
+    train_embedd = np.array(train_embedd)
+    train_labels = np.array(train_labels)
+    test_embedd = np.array(test_embedd)
+    test_labels = np.array(test_labels)
+
+    tsne = TSNE(n_components=2, verbose=0, perplexity=40, learning_rate=1000)
+    tsne_results = tsne.fit_transform(np.vstack([train_embedd,test_embedd]))
+    
+    train_embedd_2dim = tsne_results[:len(train_embedd)]
+    test_embedd_2dim = tsne_results[len(train_embedd):]
+
+    cmap = cm.get_cmap('seismic')
+    fig, ax = plt.subplots(1, 1, figsize=(9,9))
+
+    for lab in range(num_categories): #Real label
+        train_indices_lab = train_labels == lab #Train examples of class==lab
+        #test_indices_lab = test_labels == lab #Test examples of class==lab
+        
+        ax.scatter(train_embedd_2dim[train_indices_lab,0], train_embedd_2dim[train_indices_lab,1],
+                   c=np.array(cmap(64+lab*128)).reshape(1,4), label = f"Train $Y={lab}$" ,alpha=0.2, marker ='.')
+
+    #Print test fails as black
+    test_correct_indices = test_labels == test_pred
+    ax.scatter(test_embedd_2dim[test_correct_indices,0], test_embedd_2dim[test_correct_indices,1],
+                c='green', label = f"Test $Y = \hat{{Y}}$" ,alpha=0.6, marker ='x')
+    ax.scatter(test_embedd_2dim[~test_correct_indices,0], test_embedd_2dim[~test_correct_indices,1],
+                c='black', label = f"Test $Y \\neq \hat{{Y}}$" ,alpha=0.6, marker ='x')
+
+
+    acc_test = (np.sum(test_pred == test_labels)/len(test_labels))*100
+    acc_train = (np.sum(train_pred == train_labels)/len(train_pred))*100
+    ax.set_title(f'{title}\n$Acc_{{train}}={acc_train:.1f}$ - $Acc_{{test}}={acc_test:.1f}$')
+    ax.legend(fontsize='large', markerscale=2)
+    ax.tick_params(left = False, right = False , labelleft = False ,
+                labelbottom = False, bottom = False)
+
+    plt.savefig(f"""{save_path}.jpg""", dpi=600, bbox_inches='tight')
 
 class CTNet_readout_embedding(torch.nn.Module):
     def __init__(self, in_channels, out_channels, k_centers, hidden_channels=32):
