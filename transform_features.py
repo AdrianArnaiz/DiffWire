@@ -42,22 +42,22 @@ class FeatureDegree(BaseTransform):
 
 
 class DIGLedges(BaseTransform):
-    def __init__(self, alpha:float, eps:float, use_edge_weigths = False):
+    def __init__(self, alpha:float, use_edge_weigths = False):
         self.alpha = alpha
-        self.eps = eps
+        self.eps = 0.005
         self.use_edge_weigths = use_edge_weigths
 
     def __call__(self, data):
-        new_edges, new_weights = self.digl_edges(data.edge_index, self.alpha, self.eps)
+        new_edges, new_weights = self.digl_edges(data.edge_index, data.num_edges) 
         data.edge_index = new_edges
-        
+
         if self.use_edge_weigths:
             data.edge_weight = new_weights
-            
+        
         return data
     
     
-    def gdc(self, A: sp.csr_matrix, alpha: float, eps: float):
+    def gdc(self, A: sp.csr_matrix, alpha: float, num_previous_edges):
         N = A.shape[0]
 
         # Self-loops
@@ -71,9 +71,16 @@ class DIGLedges(BaseTransform):
 
         # PPR-based diffusion
         S = alpha * sp.linalg.inv(sp.eye(N) - (1 - alpha) * T_sym)
+        
+        # Same as e-threshold based on average degree
+        # but dynamic for all graphs
+        A = np.array(S.todense())
+        top_k_idx = np.unravel_index(np.argsort(A.ravel())[-num_previous_edges:], A.shape)
+        mask = np.ones(A.shape, bool)
+        mask[top_k_idx] = False
+        A[mask] = 0
+        S_tilde = sp.csr_matrix(A)
 
-        # Sparsify using threshold epsilon
-        S_tilde = S.multiply(S >= eps)
 
         # Column-normalized transition matrix on graph S_tilde
         D_tilde_vec = S_tilde.sum(0).A1
@@ -81,12 +88,24 @@ class DIGLedges(BaseTransform):
 
         return T_S
 
-    def digl_edges(self, edges, alpha, eps):
+    def get_top_k_matrix(self, A: np.ndarray, k: int = 128) -> np.ndarray:
+        """
+        Get k best edges for EACH NODE
+        """
+        num_nodes = A.shape[0]
+        print('AA', num_nodes)
+        row_idx = np.arange(num_nodes)
+        A[A.argsort(axis=0)[:num_nodes - k], row_idx] = 0.
+        norm = A.sum(axis=0)
+        norm[norm <= 0] = 1 # avoid dividing by zero
+        return A/norm
+
+    def digl_edges(self, edges, num_previous_edges):
         A0 = sp.csr_matrix(to_scipy_sparse_matrix(edges))
-        new_sp_matrix = sp.csr_matrix(self.gdc(A0, self.alpha, self.eps))
+        new_sp_matrix = sp.csr_matrix(self.gdc(A0, self.alpha, num_previous_edges))
         new_edge_index, weights = from_scipy_sparse_matrix(new_sp_matrix)
         return new_edge_index, weights
     
     
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.alpha})'
+        return f'{self.__class__.__name__}(alpha={self.alpha}, eps={self.alpha})'
