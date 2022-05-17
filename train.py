@@ -3,7 +3,7 @@ import os
 import random
 
 from sklearn.model_selection import train_test_split
-from nets import CTNet, GAPNet, MinCutNet
+from nets import CTNet, DiffWire, GAPNet, MinCutNet
 import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import GNNBenchmarkDataset, TUDataset
@@ -43,13 +43,13 @@ parser.add_argument(
 parser.add_argument(
     "--model",
     default="CTNet",
-    choices=["CTNet","GAPNet","MinCutNet"],
+    choices=["CTNet","GAPNet","MinCutNet", "DiffWire"],
     help="nada",
 )
 parser.add_argument(
     "--derivative",
     default="laplacian",
-    choices=["laplacian","normalized","normalizedv2"],
+    choices=["laplacian","normalizedv2"], #,"normalized"
     help="nada",
 )
 parser.add_argument(
@@ -90,12 +90,12 @@ args = parser.parse_args()
 
 #Procesing dataset
 No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
-preprocessing = DIGLedges(alpha=0.1, eps=0.0005) if args.prepro == "digl" else None
+preprocessing = DIGLedges(alpha=0.1, eps=0.0003) if args.prepro == "digl" else None
 aux_digl_foler = "/DIGL" if args.prepro == "digl" else ""
 
 if args.dataset not in GNNBenchmarkDataset.names:
     if args.dataset not in No_Features:
-        dataset = TUDataset(root='data/TUDataset'+aux_digl_foler, name=args.dataset, transform=preprocessing)
+        dataset = TUDataset(root='data/TUDataset'+aux_digl_foler, name=args.dataset, pre_transform=preprocessing)
         if args.dataset =="MUTAG": # 188 graphs
             TRAIN_SPLIT = 150
             BATCH_SIZE = 32
@@ -110,7 +110,11 @@ if args.dataset not in GNNBenchmarkDataset.names:
             num_of_centers = 39 #mean number of nodes according to PyGeom
     else:
         #datasetGNN = TUDataset(root='data/TUDataset', name=args.dataset)
-        dataset = TUDataset(root='data/TUDataset'+aux_digl_foler,name=args.dataset, pre_transform=FeatureDegree(), use_node_attr=True, transform=preprocessing)
+        if args.prepro == "digl":
+            preprocessing == T.Compose([DIGLedges(alpha=0.1, eps=0.0003), FeatureDegree()])
+        else:
+            preprocessing = FeatureDegree()
+        dataset = TUDataset(root='data/TUDataset'+aux_digl_foler,name=args.dataset, pre_transform=preprocessing, use_node_attr=True)
         #dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset, dataset=datasetGNN)        
         if args.dataset =="IMDB-BINARY": # 1000 graphs
             TRAIN_SPLIT = 800
@@ -127,7 +131,7 @@ if args.dataset not in GNNBenchmarkDataset.names:
         else:
             raise Exception("Not dataset in list of datasets")
 else: #GNNBenchmarkDataset
-    dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset'+aux_digl_foler, name=args.dataset, transform=preprocessing) #MNISTo CIFAR10
+    dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset'+aux_digl_foler, name=args.dataset, pre_transform=preprocessing) #MNISTo CIFAR10
     if args.dataset =="MNIST":
         TRAIN_SPLIT = 50000
         BATCH_SIZE = 100
@@ -210,6 +214,11 @@ for e in range(len(RandList)):
         model = GAPNet(dataset.num_features, dataset.num_classes, derivative=args.derivative, device=device).to(device)
     elif args.model == 'MinCutNet':
         model = MinCutNet(dataset.num_features, dataset.num_classes).to(device)
+    elif args.model == 'DiffWire':
+        model = DiffWire(dataset.num_features, dataset.num_classes, k_centers=num_of_centers,
+                        derivative="normalizedv2", device=device, EPS=1e-15).to(device)
+    else:
+        raise Exception(f"Not implemented model: {args.model}")
     
     train_indices, test_indices = train_test_split(list(range(len(dataset.data.y))), test_size=0.2, stratify=dataset.data.y,
                                     random_state=RandList[e], shuffle=True)
