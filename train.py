@@ -90,12 +90,12 @@ args = parser.parse_args()
 
 #Procesing dataset
 No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
-preprocessing = DIGLedges(alpha=0.1, eps=0.0003) if args.prepro == "digl" else None
+preprocessing = DIGLedges(alpha=0.1) if args.prepro == "digl" else None
 aux_digl_foler = "/DIGL" if args.prepro == "digl" else ""
 
 if args.dataset not in GNNBenchmarkDataset.names:
     if args.dataset not in No_Features:
-        dataset = TUDataset(root='data/TUDataset'+aux_digl_foler, name=args.dataset, pre_transform=preprocessing)
+        dataset = TUDataset(root='data'+os.sep+aux_digl_foler+os.sep+'TUDataset', name=args.dataset, pre_transform=preprocessing)
         if args.dataset =="MUTAG": # 188 graphs
             TRAIN_SPLIT = 150
             BATCH_SIZE = 32
@@ -111,11 +111,14 @@ if args.dataset not in GNNBenchmarkDataset.names:
     else:
         #datasetGNN = TUDataset(root='data/TUDataset', name=args.dataset)
         if args.prepro == "digl":
-            preprocessing == T.Compose([DIGLedges(alpha=0.1, eps=0.0003), FeatureDegree()])
+            preprocessing = preprocessing
+            processing = FeatureDegree()
         else:
             preprocessing = FeatureDegree()
-        dataset = TUDataset(root='data/TUDataset'+aux_digl_foler,name=args.dataset, pre_transform=preprocessing, use_node_attr=True)
-        #dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset, dataset=datasetGNN)        
+            processing = None
+        dataset = TUDataset(root='data'+os.sep+aux_digl_foler+os.sep+'TUDataset',name=args.dataset,
+                            pre_transform=preprocessing, transform = processing, use_node_attr=True)
+        #dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset,dataset=datasetGNN)        
         if args.dataset =="IMDB-BINARY": # 1000 graphs
             TRAIN_SPLIT = 800
             BATCH_SIZE = 64
@@ -131,7 +134,7 @@ if args.dataset not in GNNBenchmarkDataset.names:
         else:
             raise Exception("Not dataset in list of datasets")
 else: #GNNBenchmarkDataset
-    dataset = GNNBenchmarkDataset(root='data/GNNBenchmarkDataset'+aux_digl_foler, name=args.dataset, pre_transform=preprocessing) #MNISTo CIFAR10
+    dataset = GNNBenchmarkDataset(root='data'+os.sep+aux_digl_foler+os.sep+'GNNBenchmarkDataset', name=args.dataset, pre_transform=preprocessing) #MNISTo CIFAR10
     if args.dataset =="MNIST":
         TRAIN_SPLIT = 50000
         BATCH_SIZE = 100
