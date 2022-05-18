@@ -37,7 +37,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
         "--dataset",
         default="CIFAR10",
-        choices=["MUTAG","ENZYMES","PROTEINS","CIFAR10","MNIST","COLLAB","IMDB-BINARY","REDDIT-BINARY"],
+        choices=["MUTAG","ENZYMES","PROTEINS","CIFAR10","MNIST","COLLAB","IMDB-BINARY","REDDIT-BINARY","CSL"],
         help="nada",
 )
 parser.add_argument(
@@ -89,7 +89,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 #Procesing dataset
-No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY"]
+No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY", "CSL"]
 preprocessing = DIGLedges(alpha=0.1) if args.prepro == "digl" else None
 aux_digl_foler = "/DIGL" if args.prepro == "digl" else ""
 
@@ -108,8 +108,7 @@ if args.dataset not in GNNBenchmarkDataset.names:
             TRAIN_SPLIT = 1000
             BATCH_SIZE = 64
             num_of_centers = 39 #mean number of nodes according to PyGeom
-    else:
-        #datasetGNN = TUDataset(root='data/TUDataset', name=args.dataset)
+    else: #Features
         if args.prepro == "digl":
             preprocessing = preprocessing
             processing = FeatureDegree()
@@ -134,15 +133,30 @@ if args.dataset not in GNNBenchmarkDataset.names:
         else:
             raise Exception("Not dataset in list of datasets")
 else: #GNNBenchmarkDataset
-    dataset = GNNBenchmarkDataset(root='data'+os.sep+aux_digl_foler+os.sep+'GNNBenchmarkDataset', name=args.dataset, pre_transform=preprocessing) #MNISTo CIFAR10
-    if args.dataset =="MNIST":
-        TRAIN_SPLIT = 50000
-        BATCH_SIZE = 100
-        num_of_centers = 100
-    elif args.dataset == "CIFAR10":
-        TRAIN_SPLIT = 40000
-        BATCH_SIZE = 100
-        num_of_centers = 100
+    if args.dataset  in No_Features:
+        if args.prepro == "digl":
+            preprocessing = preprocessing
+            processing = FeatureDegree()
+        else:
+            preprocessing = FeatureDegree()
+            processing = None
+
+        dataset = GNNBenchmarkDataset(root='data'+os.sep+aux_digl_foler+os.sep+'GNNBenchmarkDataset', name=args.dataset,
+                            pre_transform=preprocessing, transform = processing)
+        if args.dataset =="CSL":
+            TRAIN_SPLIT = 120
+            BATCH_SIZE = 10
+            num_of_centers = 42
+    else:
+        dataset = GNNBenchmarkDataset(root='data'+os.sep+aux_digl_foler+os.sep+'GNNBenchmarkDataset', name=args.dataset, pre_transform=preprocessing) #MNISTo CIFAR10
+        if args.dataset =="MNIST":
+            TRAIN_SPLIT = 50000
+            BATCH_SIZE = 100
+            num_of_centers = 100
+        elif args.dataset == "CIFAR10":
+            TRAIN_SPLIT = 40000
+            BATCH_SIZE = 100
+            num_of_centers = 100
 
 ##################### STATIC Variables #################################
 
@@ -227,6 +241,7 @@ for e in range(len(RandList)):
                                     random_state=RandList[e], shuffle=True)
     train_dataset = torch.utils.data.Subset(dataset, train_indices)
     test_dataset = torch.utils.data.Subset(dataset, test_indices)
+    
 
     print(len(train_dataset),len(test_dataset))
     #model = GAPNet(dataset.num_features, dataset.num_classes, derivative=DERIVATIVE, device=device).to(device)
