@@ -17,7 +17,11 @@ conda activate <env>
 conda install pip
 pip freeze > requirements.txt
 ```
+If it doesn´t work, try:
+```
 
+conda env create -f environment_experiments.yml
+```
 ## Code organization
 
 
