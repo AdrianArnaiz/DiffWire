@@ -1,5 +1,5 @@
 # Inductive Graph Rewiring via the Lovász Bound
-<img width="950" alt="image" src="https://user-images.githubusercontent.com/60975511/169368951-589a5890-099c-4f38-b189-b9ef5abd3b4b.png">
+<img width="942" alt="image" src="https://user-images.githubusercontent.com/60975511/169371484-f31a1caa-0249-4c22-aba4-055cda206241.png">
 
 
 ## Dependencies
