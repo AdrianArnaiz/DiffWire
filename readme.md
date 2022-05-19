@@ -1,5 +1,5 @@
 # Inductive Graph Rewiring via the Lovász Bound
-
+<img width="955" alt="image" src="https://user-images.githubusercontent.com/60975511/169361386-b08f83e9-c302-4ebe-8b1c-dea70fa709b1.png">
 $$
 \left| \frac{1}{vol(G)}CT_{uv}-\left(\frac{1}{d_u} + \frac{1}{d_v}\right)\right|\le \frac{1}{\lambda_2}\frac{2}{d_{min}}
 $$
