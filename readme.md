@@ -17,8 +17,8 @@ pip freeze > requirements.txt
 ```
 If it doesn´t work, try:
 ```
-
 conda env create -f environment_experiments.yml
+conda activate DiffWire
 ```
 ## Code organization
 
