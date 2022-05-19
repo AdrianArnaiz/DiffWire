@@ -36,7 +36,7 @@ def dense_CT_rewiring(x, adj, s, mask=None, EPS=1e-15): # x torch.Size([20, 40, 
     # Calculate degree d_flat and degree matrix d
     d_flat = torch.einsum('ijk->ij', adj) # torch.Size([20, N]) 
     #print("d_flat size", d_flat.size())
-    d = _rank3_diag(d_flat) # d torch.Size([20, N, N]) 
+    d = _rank3_diag(d_flat)+EPS  # d torch.Size([20, N, N]) 
     #print("d size", d.size())
 
     # Calculate Laplacian L = D - A 
@@ -55,7 +55,7 @@ def dense_CT_rewiring(x, adj, s, mask=None, EPS=1e-15): # x torch.Size([20, 40, 
     #print("CT_num", CT_num)
     # Calculate CT_den 
     CT_den = _rank3_trace(
-        torch.matmul(torch.matmul(s.transpose(1, 2), d), s)) # [20, k, N]*[20, N, N]->[20, k, N]*[20, N, k] -> [20] one sum over each graph
+        torch.matmul(torch.matmul(s.transpose(1, 2), d ), s))+EPS # [20, k, N]*[20, N, N]->[20, k, N]*[20, N, k] -> [20] one sum over each graph
     #print("CT_den size", CT_den.size())
     #print("CT_den", CT_den)
 

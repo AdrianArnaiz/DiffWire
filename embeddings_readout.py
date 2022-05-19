@@ -12,12 +12,12 @@ import time
 
 ###################
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = "cuda:1"
+device = "cuda:0"
 
 print(device)
 
 model_family = 'GAP' # CT, GAP, MinCut
-model_path = "trained_models/REDDIT-BINARY_GAPNet_laplacian_16_05_22__11_04_iter0.pth"
+model_path = "models/REDDIT-BINARY_GAPNet_normalized_19_05_22__10_09_iter0.pth"
 #model_family = 'MinCut' # CT, GAP, MinCut
 #model_path = "trained_models/REDDIT-BINARY_MinCutNet_16_05_22__11_05_iter0.pth"
 #model_family = 'CT' # CT, GAP, MinCut
@@ -25,7 +25,7 @@ model_path = "trained_models/REDDIT-BINARY_GAPNet_laplacian_16_05_22__11_04_iter
 
 dataset = 'REDDIT' #REDDIT, COLLAB, IMDB
 
-SAVE_PATH = "figs/"+model_family+'Lap_'+dataset+"_READOUT_"+time.strftime('%d_%m_%y__%H_%M')
+SAVE_PATH = "figs/"+model_family+'_'+dataset+"_READOUT_"+time.strftime('%d_%m_%y__%H_%M')
 
 fig_style = 'wrong_pred' #["real_predicted",  "wrong_pred"]
 ####################
@@ -59,9 +59,6 @@ else:
 model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
 model.eval()
 
-"""model =  GAPNet(dataset.num_features, dataset.num_classes, derivative="laplacian",device=device).to(device)
-model.load_state_dict(torch.load("models/REDDIT-BINARY_GAPNet_laplacian_iter0.pth", map_location=torch.device(device)))"""
-
 loss, acc, embeddings, labels, predictions = test_readout_embedd(model, loader, device)
 embeddings = embeddings.detach().cpu()
 
@@ -85,5 +82,5 @@ if fig_style == "real_predicted":
                             save_path=SAVE_PATH, title=model_family)
 elif fig_style == "wrong_pred":
     print_diff_readout_embeddings(e_train, e_test, lab_train, lab_test, pred_train, pred_test, len(set(l)), 
-                            save_path=SAVE_PATH, title=model_family)
+                            save_path=SAVE_PATH, title=model_family, seed=12345)
 

@@ -37,7 +37,7 @@ def test_readout_embedd(modelo, loader, device):
     return loss.detach().cpu(), correct / len(loader.dataset), test_embeddings, test_labels, test_predictions
 
 
-def print_readout_embeddings(train_embedd, test_embedd, train_labels, test_labels, train_pred, test_pred, num_categories, save_path):
+def print_readout_embeddings(train_embedd, test_embedd, train_labels, test_labels, train_pred, test_pred, num_categories, save_path, seed=42):
     plt.rcParams["font.family"] = 'serif'
     plt.rcParams['font.size'] = '14'
 
@@ -46,7 +46,7 @@ def print_readout_embeddings(train_embedd, test_embedd, train_labels, test_label
     test_embedd = np.array(test_embedd)
     test_labels = np.array(test_labels)
 
-    tsne = TSNE(n_components=2, verbose=0, perplexity=40, learning_rate=200)
+    tsne = TSNE(n_components=2, verbose=0, perplexity=40, learning_rate=200, random_state=seed)
     tsne_results = tsne.fit_transform(np.vstack([train_embedd,test_embedd]))
     
     train_embedd_2dim = tsne_results[:len(train_embedd)]
@@ -88,47 +88,47 @@ def print_readout_embeddings(train_embedd, test_embedd, train_labels, test_label
     plt.savefig(f"""{save_path}.jpg""", dpi=600, bbox_inches='tight')
 
 
-def print_diff_readout_embeddings(train_embedd, test_embedd, train_labels, test_labels, train_pred, test_pred, num_categories, save_path, title=""):
+def print_diff_readout_embeddings(train_embedd, test_embedd, train_labels, test_labels, train_pred, test_pred, num_categories, save_path, title="", seed=42):
     plt.rcParams["font.family"] = 'serif'
-    plt.rcParams['font.size'] = '14'
+    plt.rcParams['font.size'] = '18'
 
     train_embedd = np.array(train_embedd)
     train_labels = np.array(train_labels)
     test_embedd = np.array(test_embedd)
     test_labels = np.array(test_labels)
 
-    tsne = TSNE(n_components=2, verbose=0, perplexity=40, learning_rate=1000)
+    tsne = TSNE(n_components=2, verbose=0, perplexity=40, learning_rate=1000,random_state=seed)
     tsne_results = tsne.fit_transform(np.vstack([train_embedd,test_embedd]))
     
     train_embedd_2dim = tsne_results[:len(train_embedd)]
     test_embedd_2dim = tsne_results[len(train_embedd):]
 
     cmap = cm.get_cmap('seismic')
-    fig, ax = plt.subplots(1, 1, figsize=(9,9))
+    fig, ax = plt.subplots(1, 1, figsize=(10,10))
 
     for lab in range(num_categories): #Real label
         train_indices_lab = train_labels == lab #Train examples of class==lab
         #test_indices_lab = test_labels == lab #Test examples of class==lab
         
         ax.scatter(train_embedd_2dim[train_indices_lab,0], train_embedd_2dim[train_indices_lab,1],
-                   c=np.array(cmap(64+lab*128)).reshape(1,4), label = f"Train $Y={lab}$" ,alpha=0.2, marker ='.')
+                   c=np.array(cmap(64+lab*128)).reshape(1,4), label = f"Train $Y={lab}$" ,alpha=0.2, marker ='.',s=60)
 
     #Print test fails as black
     test_correct_indices = test_labels == test_pred
     ax.scatter(test_embedd_2dim[test_correct_indices,0], test_embedd_2dim[test_correct_indices,1],
-                c='green', label = f"Test $Y = \hat{{Y}}$" ,alpha=0.6, marker ='x')
+                c='green', label = f"Test $Y = \hat{{Y}}$" ,alpha=0.7, marker ='x', s=100)
     ax.scatter(test_embedd_2dim[~test_correct_indices,0], test_embedd_2dim[~test_correct_indices,1],
-                c='black', label = f"Test $Y \\neq \hat{{Y}}$" ,alpha=0.6, marker ='x')
+                c='black', label = f"Test $Y \\neq \hat{{Y}}$" ,alpha=0.7, marker ='x', s=100)
 
 
     acc_test = (np.sum(test_pred == test_labels)/len(test_labels))*100
     acc_train = (np.sum(train_pred == train_labels)/len(train_pred))*100
-    ax.set_title(f'{title}\n$Acc_{{train}}={acc_train:.1f}$ - $Acc_{{test}}={acc_test:.1f}$')
-    ax.legend(fontsize='large', markerscale=2)
+    #ax.set_title(f'{title}')#\n$Acc_{{train}}={acc_train:.1f}$ - $Acc_{{test}}={acc_test:.1f}$')
+    ax.legend(fontsize=18, markerscale=2)
     ax.tick_params(left = False, right = False , labelleft = False ,
                 labelbottom = False, bottom = False)
 
-    plt.savefig(f"""{save_path}.jpg""", dpi=600, bbox_inches='tight')
+    plt.savefig(f"""{save_path}.jpg""", dpi=250, bbox_inches='tight')
 
 class CTNet_readout_embedding(torch.nn.Module):
     def __init__(self, in_channels, out_channels, k_centers, hidden_channels=32):

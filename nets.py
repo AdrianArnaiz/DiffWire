@@ -288,8 +288,8 @@ class DiffWire(torch.nn.Module):
         self.pool_rw = Linear(hidden_channels, 2)
 
         #CT Embedding -- Pool previous to CT-Layer
-        num_of_centers1 =  k_centers # k1 - order of number of nodes
-        self.pool_ct = Linear(hidden_channels, num_of_centers1) #CT
+        self.num_of_centers1 =  k_centers # k1 - order of number of nodes
+        self.pool_ct = Linear(hidden_channels, self.num_of_centers1) #CT
 
         #Conv1
         self.conv1 = DenseGraphConv(hidden_channels, hidden_channels)
@@ -349,5 +349,6 @@ class DiffWire(torch.nn.Module):
 
         main_loss = mincut_loss_rw + CT_loss + mincut_loss
         ortho_loss = ortho_loss_rw + ortho_loss_ct + ortho_loss_mc
+        #ortho_loss_rw/2 + (1/self.num_of_centers1)*ortho_loss_ct + ortho_loss_mc/16
         #print("x", x)
         return F.log_softmax(x, dim=-1), main_loss, ortho_loss

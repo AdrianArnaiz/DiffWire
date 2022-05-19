@@ -3,6 +3,7 @@ import os
 import random
 
 from sklearn.model_selection import train_test_split
+from Erdos_Renyi_dataset import Erdos_Renyi_pyg
 from SBM_dataset import SBM_pyg
 from nets import CTNet, DiffWire, GAPNet, MinCutNet
 import torch
@@ -38,7 +39,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
         "--dataset",
         default="CIFAR10",
-        choices=["MUTAG","ENZYMES","PROTEINS","CIFAR10","MNIST","COLLAB","IMDB-BINARY","REDDIT-BINARY","CSL", "SBM"],
+        choices=["MUTAG","ENZYMES","PROTEINS","CIFAR10","MNIST","COLLAB","IMDB-BINARY","REDDIT-BINARY","CSL", "SBM", "ERDOS"],
         help="nada",
 )
 parser.add_argument(
@@ -50,7 +51,7 @@ parser.add_argument(
 parser.add_argument(
     "--derivative",
     default="laplacian",
-    choices=["laplacian","normalizedv2"], #,"normalized"
+    choices=["laplacian","normalizedv2","normalized"], #,"normalized"
     help="nada",
 )
 parser.add_argument(
@@ -91,13 +92,20 @@ args = parser.parse_args()
 
 #Procesing dataset
 No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY", "CSL"]
-preprocessing = DIGLedges(alpha=0.1) if args.prepro == "digl" else None
+preprocessing = DIGLedges(alpha=0.001) if args.prepro == "digl" else None
 aux_digl_folder = "/DIGL" if args.prepro == "digl" else ""
 
 if args.dataset == "SBM":
     dataset = SBM_pyg('./data/SBM_final'+aux_digl_folder, nb_nodes1=200, nb_graphs1=500, nb_nodes2=200, nb_graphs2=500,
                     p1=0.8, p2=0.5, qmin1=0.1, qmax1=0.15, qmin2=0.01, qmax2=0.1,
                     directed=False, pre_transform=preprocessing)
+    TRAIN_SPLIT = 800
+    BATCH_SIZE = 32
+    num_of_centers = 200
+
+if args.dataset == "ERDOS":
+    dataset = Erdos_Renyi_pyg('./data/SBM_final', nb_nodes1=200, nb_graphs1=500, nb_nodes2=200, nb_graphs2=500,
+                        p1_min=0.4, p1_max=0.6, p2_min=0.5, p2_max=0.8)
     TRAIN_SPLIT = 800
     BATCH_SIZE = 32
     num_of_centers = 200
@@ -234,7 +242,7 @@ print("- M:", args.model, "- D:",dataset,
         "- Centers (if CTNet):", num_of_centers, "- LAP (if GAPNet):", args.derivative,
         "- Classes" ,dataset.num_classes,"- Feats",dataset.num_features, file=f)
 f.close()
-EPS=1e-15
+EPS=1e-10
 for e in range(len(RandList)):
     if args.model == 'CTNet':
         model = CTNet(dataset.num_features, dataset.num_classes, k_centers=num_of_centers, EPS=EPS).to(device)
@@ -244,7 +252,7 @@ for e in range(len(RandList)):
         model = MinCutNet(dataset.num_features, dataset.num_classes).to(device)
     elif args.model == 'DiffWire':
         model = DiffWire(dataset.num_features, dataset.num_classes, k_centers=num_of_centers,
-                        derivative="normalizedv2", device=device, EPS=1e-15).to(device)
+                        derivative="normalized", device=device, EPS=EPS).to(device)
     else:
         raise Exception(f"Not implemented model: {args.model}")
     
