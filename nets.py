@@ -284,15 +284,19 @@ class DiffWire(torch.nn.Module):
         # First X transformation
         self.lin1 = Linear(in_channels, hidden_channels)
     
-        #Fiedler vector -- Pool previous to GAP-Layer
+        #B1 - Fiedler vector -- Pool previous to GAP-Layer
         self.pool_rw = Linear(hidden_channels, 2)
+        self.convgap = DenseGraphConv(hidden_channels, hidden_channels)
 
-        #CT Embedding -- Pool previous to CT-Layer
+
+        #B2 - CT Embedding -- Pool previous to CT-Layer
         self.num_of_centers1 =  k_centers # k1 - order of number of nodes
         self.pool_ct = Linear(hidden_channels, self.num_of_centers1) #CT
+        self.convct = DenseGraphConv(hidden_channels, hidden_channels)
 
-        #Conv1
-        self.conv1 = DenseGraphConv(hidden_channels, hidden_channels)
+
+        # Concatenation B1 and B2
+        self.mlp_concat = Linear(hidden_channels*2, hidden_channels)
 
         #MinCutPooling
         self.pool_mc = Linear(hidden_channels, 16) #MC
@@ -318,24 +322,25 @@ class DiffWire(torch.nn.Module):
         if torch.isnan(x).any():
           print("x nan")
         
-        #Gap Layer RW
+        #B1
         s0  = self.pool_rw(x)
-        adj, mincut_loss_rw, ortho_loss_rw = dense_mincut_rewiring(x, adj, s0, mask, 
+        adj_gap, mincut_loss_rw, ortho_loss_rw = dense_mincut_rewiring(x, adj, s0, mask, 
                                               derivative = self.derivative, EPS=self.EPS, device=self.device)
+        x_gap = self.convgap(x, adj_gap)
 
         # CT REWIRING
         # First mincut pool for computing Fiedler adn rewire 
         s1  = self.pool_ct(x)
-        adj, CT_loss, ortho_loss_ct = dense_CT_rewiring(x, adj, s1, mask, EPS = self.EPS) # out: x torch.Size([20, N, F'=32]),  adj torch.Size([20, N, N])
+        adj_ct, CT_loss, ortho_loss_ct = dense_CT_rewiring(x, adj, s1, mask, EPS = self.EPS) # out: x torch.Size([20, N, F'=32]),  adj torch.Size([20, N, N])
+        x_ct = self.convct(x, adj_ct)
 
-        # CONV1: Now on x and rewired adj: 
-        x = self.conv1(x, adj)
+        x_concat = F.relu(self.mlp_concat(torch.cat((x_gap, x_ct), dim=2)))
         
         # MINCUT_POOL
         # MLP of k=16 outputs s
-        s2 = self.pool_mc(x) 
+        s2 = self.pool_mc(x_concat) 
         # Call to dense_cut_mincut_pool to get coarsened x, adj and the losses: k=16
-        x, adj, mincut_loss, ortho_loss_mc = dense_mincut_pool(x, adj, s2, mask, EPS=self.EPS) # out x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
+        x, adj, mincut_loss, ortho_loss_mc = dense_mincut_pool(x_concat, adj, s2, mask, EPS=self.EPS) # out x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
 
         # CONV2: Now on coarsened x and adj: 
         x = self.conv2(x, adj) 
