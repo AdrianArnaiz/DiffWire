@@ -1,0 +1,11 @@
+python train.py --dataset MUTAG --model DiffWire --cuda cuda:0 --logs logsDiffWire2
+python train.py --dataset ENZYMES --model DiffWire --cuda cuda:0 --logs logsDiffWire2
+python train.py --dataset PROTEINS --model DiffWire --cuda cuda:0 --logs logsDiffWire2
+python train.py --dataset REDDIT-BINARY --model DiffWire --cuda cuda:0 --logs logsDiffWire2
+python train.py --dataset COLLAB  --model DiffWire --cuda cuda:0 --logs logsDiffWire2
+python train.py --dataset IMDB-BINARY --model DiffWire --cuda cuda:0 --logs logsDiffWire2
+python train.py --dataset PROTEINS --model DiffWire --cuda cuda:0 --logs logsDiffWire2
+python train.py --dataset SBM --model DiffWire --cuda cuda:0 --logs logsDiffWire2
+python train.py --dataset ERDOS --model DiffWire --cuda cuda:0 --logs logsDiffWire2
+python train.py --dataset MNIST --model DiffWire --cuda cuda:0 --logs logsDiffWire2
+python train.py --dataset CIFAR10 --model DiffWire --cuda cuda:0 --logs logsDiffWire2

@@ -132,6 +132,7 @@ data/
 models/
 *.sh
 !experiments_all.sh
+!exp_diffwire.sh
 data_colab/
 logs*/
 !logs_stratified/
