@@ -103,7 +103,7 @@ if args.dataset == "SBM":
     BATCH_SIZE = 32
     num_of_centers = 200
 
-if args.dataset == "ERDOS":
+elif args.dataset == "ERDOS":
     dataset = Erdos_Renyi_pyg('./data/SBM_final', nb_nodes1=200, nb_graphs1=500, nb_nodes2=200, nb_graphs2=500,
                         p1_min=0.4, p1_max=0.6, p2_min=0.5, p2_max=0.8)
     TRAIN_SPLIT = 800
