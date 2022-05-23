@@ -270,7 +270,7 @@ class MinCutNet(torch.nn.Module):
         
         mincut_loss = mincut_loss2 + ortho_loss2
         #print("x", x)
-        return F.log_softmax(x, dim=-1), mincut_loss2, ortho_loss2
+        return F.log_softmax(x, dim=-1), mincut_loss, ortho_loss2
 
 
 class DiffWire(torch.nn.Module):
@@ -297,6 +297,8 @@ class DiffWire(torch.nn.Module):
 
         # Concatenation B1 and B2
         self.mlp_concat = Linear(hidden_channels*2, hidden_channels)
+
+        self.alpha = torch.nn.Parameter(torch.Tensor([0.5]))
 
         #MinCutPooling
         self.pool_mc = Linear(hidden_channels, 16) #MC
@@ -335,6 +337,9 @@ class DiffWire(torch.nn.Module):
         x_ct = self.convct(x, adj_ct)
 
         x_concat = F.relu(self.mlp_concat(torch.cat((x_gap, x_ct), dim=2)))
+
+        #self.alpha = F.softmax(self.alpha)
+        adj = (1-self.alpha)*adj_ct + adj_gap*self.alpha
         
         # MINCUT_POOL
         # MLP of k=16 outputs s
