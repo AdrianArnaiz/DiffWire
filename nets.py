@@ -270,7 +270,7 @@ class MinCutNet(torch.nn.Module):
         
         mincut_loss = mincut_loss2 + ortho_loss2
         #print("x", x)
-        return F.log_softmax(x, dim=-1), mincut_loss, ortho_loss2
+        return F.log_softmax(x, dim=-1), mincut_loss2, ortho_loss2
 
 
 class DiffWire(torch.nn.Module):
@@ -287,24 +287,23 @@ class DiffWire(torch.nn.Module):
         #B1 - Fiedler vector -- Pool previous to GAP-Layer
         self.pool_rw = Linear(hidden_channels, 2)
         self.convgap = DenseGraphConv(hidden_channels, hidden_channels)
+        #MinCutPooling
+        self.pool_mc_gap = Linear(hidden_channels, 16) #MC
+        #Conv2
+        self.conv2gap = DenseGraphConv(hidden_channels, hidden_channels)
 
 
         #B2 - CT Embedding -- Pool previous to CT-Layer
         self.num_of_centers1 =  k_centers # k1 - order of number of nodes
         self.pool_ct = Linear(hidden_channels, self.num_of_centers1) #CT
         self.convct = DenseGraphConv(hidden_channels, hidden_channels)
-
+        #MinCutPooling
+        self.pool_mc_ct = Linear(hidden_channels, 16) #MC
+        #Conv2
+        self.conv2ct = DenseGraphConv(hidden_channels, hidden_channels)
 
         # Concatenation B1 and B2
         self.mlp_concat = Linear(hidden_channels*2, hidden_channels)
-
-        self.alpha = torch.nn.Parameter(torch.Tensor([0.5]))
-
-        #MinCutPooling
-        self.pool_mc = Linear(hidden_channels, 16) #MC
-
-        #Conv2
-        self.conv2 = DenseGraphConv(hidden_channels, hidden_channels)
 
         # MLPs towards out
         self.lin2 = Linear(hidden_channels, hidden_channels)
@@ -324,41 +323,39 @@ class DiffWire(torch.nn.Module):
         if torch.isnan(x).any():
           print("x nan")
         
-        #B1
+        # B1 - GAP BRANCH
         s0  = self.pool_rw(x)
         adj_gap, mincut_loss_rw, ortho_loss_rw = dense_mincut_rewiring(x, adj, s0, mask, 
                                               derivative = self.derivative, EPS=self.EPS, device=self.device)
         x_gap = self.convgap(x, adj_gap)
+        # Mincut
+        s_mc_gap = self.pool_mc_gap(x_gap) 
+        # Call to dense_cut_mincut_pool to get coarsened x, adj and the losses: k=16
+        x_gap, adj_gap, mincut_loss_mc1, ortho_loss_mc1 = dense_mincut_pool(x_gap, adj_gap, s_mc_gap, mask, EPS=self.EPS)
+        x_gap = self.conv2gap(x_gap, adj_gap)
 
         # CT REWIRING
         # First mincut pool for computing Fiedler adn rewire 
         s1  = self.pool_ct(x)
         adj_ct, CT_loss, ortho_loss_ct = dense_CT_rewiring(x, adj, s1, mask, EPS = self.EPS) # out: x torch.Size([20, N, F'=32]),  adj torch.Size([20, N, N])
         x_ct = self.convct(x, adj_ct)
+        # Mincut
+        s_mc_ct = self.pool_mc_ct(x_ct) 
+        # Call to dense_cut_mincut_pool to get coarsened x, adj and the losses: k=16
+        x_ct, adj_ct, mincut_loss_mc2, ortho_loss_mc2 = dense_mincut_pool(x_ct, adj_ct, s_mc_ct, mask, EPS=self.EPS)
+        x_ct = self.conv2gap(x_ct, adj_ct)
 
         x_concat = F.relu(self.mlp_concat(torch.cat((x_gap, x_ct), dim=2)))
-
-        #self.alpha = F.softmax(self.alpha)
-        adj = (1-self.alpha)*adj_ct + adj_gap*self.alpha
-        
-        # MINCUT_POOL
-        # MLP of k=16 outputs s
-        s2 = self.pool_mc(x_concat) 
-        # Call to dense_cut_mincut_pool to get coarsened x, adj and the losses: k=16
-        x, adj, mincut_loss, ortho_loss_mc = dense_mincut_pool(x_concat, adj, s2, mask, EPS=self.EPS) # out x torch.Size([20, k=16, F'=32]),  adj torch.Size([20, k2=16, k2=16])
-
-        # CONV2: Now on coarsened x and adj: 
-        x = self.conv2(x, adj) 
         
         # Readout for each of the 20 graphs
-        x = x.sum(dim=1) 
+        x = x_concat.sum(dim=1) 
         # Final MLP for graph classification: hidden channels = 32
         x = F.relu(self.lin2(x)) 
         x = self.lin3(x) 
 
 
-        main_loss = mincut_loss_rw + CT_loss + mincut_loss
-        ortho_loss = ortho_loss_rw + ortho_loss_ct + ortho_loss_mc
+        main_loss = mincut_loss_rw + CT_loss + mincut_loss_mc1 + mincut_loss_mc2
+        ortho_loss = ortho_loss_rw + ortho_loss_ct + ortho_loss_mc1 + ortho_loss_mc2
         #ortho_loss_rw/2 + (1/self.num_of_centers1)*ortho_loss_ct + ortho_loss_mc/16
         #print("x", x)
         return F.log_softmax(x, dim=-1), main_loss, ortho_loss
