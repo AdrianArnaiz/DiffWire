@@ -10,7 +10,7 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import GNNBenchmarkDataset, TUDataset
 import torch_geometric.transforms as T
-from transform_features import FeatureDegree, DIGLedges
+from transforms import FeatureDegree, DIGLedges
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_dense_batch, to_dense_adj
 import time
