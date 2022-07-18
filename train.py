@@ -10,7 +10,7 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import GNNBenchmarkDataset, TUDataset
 import torch_geometric.transforms as T
-from transforms import FeatureDegree, DIGLedges
+from transforms import FeatureDegree, DIGLedges, SDRF
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_dense_batch, to_dense_adj
 import time
@@ -63,7 +63,7 @@ parser.add_argument(
 parser.add_argument(
     "--prepro",
     default=None,
-    choices=[None,"digl"],
+    choices=[None,"digl", "sdrf"],
     help="digl preprocessing",
 )
 parser.add_argument(
@@ -92,11 +92,25 @@ args = parser.parse_args()
 
 #Procesing dataset
 No_Features = ["COLLAB","IMDB-BINARY","REDDIT-BINARY", "CSL"]
-preprocessing = DIGLedges(alpha=0.001) if args.prepro == "digl" else None
-aux_digl_folder = "/DIGL" if args.prepro == "digl" else ""
+
+if args.prepro == 'digl':
+    preprocessing = DIGLedges(alpha=0.001)
+    aux_prepro_folder = "/DIGL" if args.prepro == "digl" else ""
+
+elif args.prepro == 'sdrf':
+    preprocessing = SDRF(undirected = True, max_steps=10,
+                        remove_edges = True, removal_bound = 0.5) 
+    aux_prepro_folder = "/SDRF" if args.prepro == "sdrf" else ""
+
+elif args.prepro is None:
+    aux_prepro_folder = ""
+    preprocessing = None
+
+else:
+    raise NotImplementedError("Not implemented preprocessing")
 
 if args.dataset == "SBM":
-    dataset = SBM_pyg('./data/SBM_final'+aux_digl_folder, nb_nodes1=200, nb_graphs1=500, nb_nodes2=200, nb_graphs2=500,
+    dataset = SBM_pyg('./data/SBM_final'+aux_prepro_folder, nb_nodes1=200, nb_graphs1=500, nb_nodes2=200, nb_graphs2=500,
                     p1=0.8, p2=0.5, qmin1=0.1, qmax1=0.15, qmin2=0.01, qmax2=0.1,
                     directed=False, pre_transform=preprocessing)
     TRAIN_SPLIT = 800
@@ -112,7 +126,7 @@ if args.dataset == "ERDOS":
 
 elif args.dataset not in GNNBenchmarkDataset.names:
     if args.dataset not in No_Features:
-        dataset = TUDataset(root='data'+os.sep+aux_digl_folder+os.sep+'TUDataset', name=args.dataset, pre_transform=preprocessing)
+        dataset = TUDataset(root='data'+os.sep+aux_prepro_folder+os.sep+'TUDataset', name=args.dataset, pre_transform=preprocessing)
         if args.dataset =="MUTAG": # 188 graphs
             TRAIN_SPLIT = 150
             BATCH_SIZE = 32
@@ -126,13 +140,13 @@ elif args.dataset not in GNNBenchmarkDataset.names:
             BATCH_SIZE = 64
             num_of_centers = 39 #mean number of nodes according to PyGeom
     else: #Features
-        if args.prepro == "digl":
+        if args.prepro is not None:
             preprocessing = preprocessing
             processing = FeatureDegree()
         else:
             preprocessing = FeatureDegree()
             processing = None
-        dataset = TUDataset(root='data'+os.sep+aux_digl_folder+os.sep+'TUDataset',name=args.dataset,
+        dataset = TUDataset(root='data'+os.sep+aux_prepro_folder+os.sep+'TUDataset',name=args.dataset,
                             pre_transform=preprocessing, transform = processing, use_node_attr=True)
         #dataset = TUDatasetFeatures(root='data/TUDataset', name=args.dataset,dataset=datasetGNN)        
         if args.dataset =="IMDB-BINARY": # 1000 graphs
@@ -151,21 +165,21 @@ elif args.dataset not in GNNBenchmarkDataset.names:
             raise Exception("Not dataset in list of datasets")
 else: #GNNBenchmarkDataset
     if args.dataset  in No_Features:
-        if args.prepro == "digl":
+        if args.prepro is not None:
             preprocessing = preprocessing
             processing = FeatureDegree()
         else:
             preprocessing = FeatureDegree()
             processing = None
 
-        dataset = GNNBenchmarkDataset(root='data'+os.sep+aux_digl_folder+os.sep+'GNNBenchmarkDataset', name=args.dataset,
+        dataset = GNNBenchmarkDataset(root='data'+os.sep+aux_prepro_folder+os.sep+'GNNBenchmarkDataset', name=args.dataset,
                             pre_transform=preprocessing, transform = processing)
         if args.dataset =="CSL":
             TRAIN_SPLIT = 120
             BATCH_SIZE = 10
             num_of_centers = 42
     else:
-        dataset = GNNBenchmarkDataset(root='data'+os.sep+aux_digl_folder+os.sep+'GNNBenchmarkDataset', name=args.dataset, pre_transform=preprocessing) #MNISTo CIFAR10
+        dataset = GNNBenchmarkDataset(root='data'+os.sep+aux_prepro_folder+os.sep+'GNNBenchmarkDataset', name=args.dataset, pre_transform=preprocessing) #MNISTo CIFAR10
         if args.dataset =="MNIST":
             TRAIN_SPLIT = 50000
             BATCH_SIZE = 100
@@ -185,6 +199,7 @@ exp_name = f"{args.dataset}"
 exp_name = exp_name + f"{dataset.details}" if args.dataset == "SBM" else exp_name #add sbm details
 exp_name = exp_name + f"_{args.model}"
 exp_name = exp_name+"DIGL" if args.prepro=="digl" else exp_name
+exp_name = exp_name+"SDRF" if args.prepro=="sdrf" else exp_name
 exp_name = exp_name + f"_{args.derivative}" if args.model=="GAPNet" else exp_name # add derivative details
 exp_time = time.strftime('%d_%m_%y__%H_%M')
 train_log_file = exp_name + f"_{exp_time}.txt"
