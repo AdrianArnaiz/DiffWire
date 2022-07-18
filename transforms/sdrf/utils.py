@@ -40,7 +40,7 @@ def get_component(dataset, start: int = 0) -> set:
 
 
 def get_largest_connected_component(dataset) -> np.ndarray:
-    remaining_nodes = set(range(dataset.x.shape[0]))
+    remaining_nodes = set(range(dataset.num_nodes))
     comps = []
     while remaining_nodes:
         start = min(remaining_nodes)
@@ -54,7 +54,10 @@ def get_dataset(dataset: Data, use_lcc: bool = True):
     if use_lcc:
         lcc = get_largest_connected_component(dataset)
 
-        x_new = dataset.x[lcc]
+        if dataset.x is not None:
+            x_new = dataset.x[lcc]
+        else:
+            x_new = None
         y_new = dataset.y # for graph clf, same y
 
         row, col = dataset.edge_index.numpy()
@@ -64,7 +67,8 @@ def get_dataset(dataset: Data, use_lcc: bool = True):
         data = Data(
             x=x_new,
             edge_index=torch.LongTensor(edges),
-            y=y_new
+            y=y_new,
+            num_nodes = dataset.num_nodes
         )
         dataset = data
 
