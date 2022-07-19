@@ -24,7 +24,7 @@ class SDRF(BaseTransform):
 
     def __call__(self, graph_data):
 
-        graph_data = get_dataset(graph_data, use_lcc=True)
+        graph_data = get_dataset(graph_data, use_lcc=False)
 
         altered_data = sdrf(
             graph_data,

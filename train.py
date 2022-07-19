@@ -98,8 +98,8 @@ if args.prepro == 'digl':
     aux_prepro_folder = "/DIGL" if args.prepro == "digl" else ""
 
 elif args.prepro == 'sdrf':
-    preprocessing = SDRF(undirected = True, max_steps=10,
-                        remove_edges = True, removal_bound = 0.5) 
+    preprocessing = SDRF(undirected = True, max_steps=35, tau = 5,
+                        remove_edges = True, removal_bound = 0.1) 
     aux_prepro_folder = "/SDRF" if args.prepro == "sdrf" else ""
 
 elif args.prepro is None:
@@ -117,7 +117,7 @@ if args.dataset == "SBM":
     BATCH_SIZE = 32
     num_of_centers = 200
 
-if args.dataset == "ERDOS":
+elif args.dataset == "ERDOS":
     dataset = Erdos_Renyi_pyg('./data/SBM_final', nb_nodes1=200, nb_graphs1=500, nb_nodes2=200, nb_graphs2=500,
                         p1_min=0.4, p1_max=0.6, p2_min=0.5, p2_max=0.8)
     TRAIN_SPLIT = 800
@@ -222,13 +222,14 @@ def train(epoch, loader):
     for data in loader:
         data = data.to(device)
         optimizer.zero_grad()
+        print(data.x.shape, data.num_nodes, data.num_edges, data.edge_index.shape)
+        exit()
         out, mc_loss, o_loss = model(data.x, data.edge_index, data.batch) # data.batch  torch.Size([783])
         loss = F.nll_loss(out, data.y.view(-1)) + mc_loss + o_loss
         loss.backward()
         loss_all += data.y.size(0) * loss.item()
         optimizer.step()
         correct += out.max(dim=1)[1].eq(data.y.view(-1)).sum().item() #accuracy in train AFTER EACH BACH
-    #print("Training graphs per epoch", nG)
     return loss_all / len(loader.dataset), correct / len(loader.dataset)
 
 @torch.no_grad()
@@ -238,8 +239,6 @@ def test(loader):
     for data in loader:
         data = data.to(device)
         pred, mc_loss, o_loss = model(data.x, data.edge_index, data.batch)
-        #print(next(model.parameters()).device)
-        #print(data.x.device)
         loss = F.nll_loss(pred, data.y.view(-1)) + mc_loss + o_loss
         correct += pred.max(dim=1)[1].eq(data.y.view(-1)).sum().item()
 
@@ -257,6 +256,9 @@ print("- M:", args.model, "- D:",dataset,
         "- Centers (if CTNet):", num_of_centers, "- LAP (if GAPNet):", args.derivative,
         "- Classes" ,dataset.num_classes,"- Feats",dataset.num_features, file=f)
 f.close()
+
+print("- M:", args.model, "- D:",dataset, "- Train_split:", TRAIN_SPLIT, "- B:",BATCH_SIZE)
+
 EPS=1e-10
 for e in range(len(RandList)):
     if args.model == 'CTNet':
@@ -275,9 +277,6 @@ for e in range(len(RandList)):
                                     random_state=RandList[e], shuffle=True)
     train_dataset = torch.utils.data.Subset(dataset, train_indices)
     test_dataset = torch.utils.data.Subset(dataset, test_indices)
-    
-
-    print(len(train_dataset),len(test_dataset))
     #model = GAPNet(dataset.num_features, dataset.num_classes, derivative=DERIVATIVE, device=device).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-4)  #
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True) # Original 64
