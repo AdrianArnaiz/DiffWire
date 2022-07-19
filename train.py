@@ -222,8 +222,6 @@ def train(epoch, loader):
     for data in loader:
         data = data.to(device)
         optimizer.zero_grad()
-        print(data.x.shape, data.num_nodes, data.num_edges, data.edge_index.shape)
-        exit()
         out, mc_loss, o_loss = model(data.x, data.edge_index, data.batch) # data.batch  torch.Size([783])
         loss = F.nll_loss(out, data.y.view(-1)) + mc_loss + o_loss
         loss.backward()
