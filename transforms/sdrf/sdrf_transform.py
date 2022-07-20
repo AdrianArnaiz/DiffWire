@@ -15,7 +15,7 @@ class SDRF(BaseTransform):
         use_edge_weigths = True
         ):
         
-        self.max_steps = int(max_steps)
+        self.max_steps = max_steps
         self.remove_edges = remove_edges
         self.removal_bound = removal_bound
         self.tau = tau
@@ -25,6 +25,11 @@ class SDRF(BaseTransform):
     def __call__(self, graph_data):
 
         graph_data = get_dataset(graph_data, use_lcc=False)
+
+        if self.max_steps == 'dynamic':
+            self.max_steps = int(0.7 * graph_data.num_nodes)
+        else:
+            self.max_steps = int(self.max_steps)
 
         altered_data = sdrf(
             graph_data,

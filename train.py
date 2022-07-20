@@ -98,8 +98,8 @@ if args.prepro == 'digl':
     aux_prepro_folder = "/DIGL" if args.prepro == "digl" else ""
 
 elif args.prepro == 'sdrf':
-    preprocessing = SDRF(undirected = True, max_steps=35, tau = 5,
-                        remove_edges = True, removal_bound = 0.1) 
+    preprocessing = SDRF(undirected = True, max_steps="dynamic", tau = 20,
+                        remove_edges = True, removal_bound = 0) 
     aux_prepro_folder = "/SDRF" if args.prepro == "sdrf" else ""
 
 elif args.prepro is None:
