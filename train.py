@@ -10,7 +10,7 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import GNNBenchmarkDataset, TUDataset
 import torch_geometric.transforms as T
-from transforms import FeatureDegree, DIGLedges, SDRF
+from transforms import FeatureDegree, DIGLedges, SDRF, KNNGraph
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_dense_batch, to_dense_adj
 import time
@@ -63,7 +63,7 @@ parser.add_argument(
 parser.add_argument(
     "--prepro",
     default=None,
-    choices=[None,"digl", "sdrf"],
+    choices=[None,"digl", "sdrf", "knn"],
     help="digl preprocessing",
 )
 parser.add_argument(
@@ -101,6 +101,12 @@ elif args.prepro == 'sdrf':
     preprocessing = SDRF(undirected = True, max_steps="dynamic", tau = 20,
                         remove_edges = True, removal_bound = 0) 
     aux_prepro_folder = "/SDRF" if args.prepro == "sdrf" else ""
+elif args.prepro == 'knn':
+    preprocessing = KNNGraph(
+        k=None,
+        force_undirected=True
+    )
+    aux_prepro_folder = "/KNN" if args.prepro == "knn" else ""
 
 elif args.prepro is None:
     aux_prepro_folder = ""
@@ -125,7 +131,7 @@ elif args.dataset == "ERDOS":
     num_of_centers = 200
 
 elif args.dataset not in GNNBenchmarkDataset.names:
-    if args.dataset not in No_Features:
+    if args.dataset not in No_Features: #Features
         dataset = TUDataset(root='data'+os.sep+aux_prepro_folder+os.sep+'TUDataset', name=args.dataset, pre_transform=preprocessing)
         if args.dataset =="MUTAG": # 188 graphs
             TRAIN_SPLIT = 150
@@ -139,7 +145,7 @@ elif args.dataset not in GNNBenchmarkDataset.names:
             TRAIN_SPLIT = 1000
             BATCH_SIZE = 64
             num_of_centers = 39 #mean number of nodes according to PyGeom
-    else: #Features
+    else: #No Features
         if args.prepro is not None:
             preprocessing = preprocessing
             processing = FeatureDegree()
