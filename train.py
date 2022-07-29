@@ -3,8 +3,8 @@ import os
 import random
 
 from sklearn.model_selection import train_test_split
-from Erdos_Renyi_dataset import Erdos_Renyi_pyg
-from SBM_dataset import SBM_pyg
+from datasets.Erdos_Renyi_dataset import Erdos_Renyi_pyg
+from datasets.SBM_dataset import SBM_pyg
 from nets import CTNet, DiffWire, GAPNet, MinCutNet
 import torch
 import torch.nn.functional as F

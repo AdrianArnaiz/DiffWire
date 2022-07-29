@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.utils import to_dense_batch, to_dense_adj
 from torch_geometric.nn import GCNConv, DenseGraphConv
-from ein_utils import _rank3_diag, _rank3_trace
+from layers.utils.ein_utils import _rank3_diag, _rank3_trace
 
 def dense_mincut_pool(x, adj, s, mask=None, EPS=1e-15): # x torch.Size([20, 40, 32]) ; mask torch.Size([20, 40]) batch_size=20
     #print("Input x size to mincut pool", x.size())

@@ -3,7 +3,7 @@
 # We recommend user to use this module when applying graph convolution on dense graphs.
 #from torch_geometric.nn import GCNConv, DenseGraphConv
 import torch
-from ein_utils import _rank3_diag, _rank3_trace
+from layers.utils.ein_utils import _rank3_diag, _rank3_trace
 
 def dense_CT_rewiring(x, adj, s, mask=None, EPS=1e-15): # x torch.Size([20, 40, 32]) ; mask torch.Size([20, 40]) batch_size=20
     #print("Input x size to mincut pool", x.size())

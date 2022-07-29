@@ -2,11 +2,11 @@ import time
 import torch
 from torch_geometric.utils import to_dense_batch, to_dense_adj
 from torch_geometric.nn import GCNConv, DenseGraphConv
-from ein_utils import _rank3_diag, _rank3_trace
-from approximate_fiedler import approximate_Fiedler 
-from approximate_fiedler import NLderivative_of_lambda2_wrt_adjacency, NLfiedler_values 
-from approximate_fiedler import derivative_of_lambda2_wrt_adjacency, fiedler_values
-from approximate_fiedler import NLderivative_of_lambda2_wrt_adjacencyV2, NLfiedler_valuesV2
+from layers.utils.ein_utils import _rank3_diag, _rank3_trace
+from layers.utils.approximate_fiedler import approximate_Fiedler 
+from layers.utils.approximate_fiedler import NLderivative_of_lambda2_wrt_adjacency, NLfiedler_values 
+from layers.utils.approximate_fiedler import derivative_of_lambda2_wrt_adjacency, fiedler_values
+from layers.utils.approximate_fiedler import NLderivative_of_lambda2_wrt_adjacencyV2, NLfiedler_valuesV2
 
 def dense_mincut_rewiring(x, adj, s, mask=None, derivative = None, EPS=1e-15, device=None): # x torch.Size([20, 40, 32]) ; mask torch.Size([20, 40]) batch_size=20
     

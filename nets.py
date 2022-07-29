@@ -1,12 +1,13 @@
 import time
-from GAP_layer import dense_mincut_rewiring
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear
 from torch_geometric.nn import DenseGraphConv
 from torch_geometric.utils import to_dense_batch, to_dense_adj
-from CT_layer import dense_CT_rewiring
-from MinCut_Layer import dense_mincut_pool
+from layers.CT_layer import dense_CT_rewiring
+from layers.MinCut_Layer import dense_mincut_pool
+from layers.GAP_layer import dense_mincut_rewiring
+
 
 class GAPNet(torch.nn.Module):
     def __init__(self, in_channels, out_channels, hidden_channels=32, derivative=None, EPS=1e-15, device=None):

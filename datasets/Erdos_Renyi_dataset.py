@@ -78,7 +78,7 @@ class Erdos_Renyi_pyg(InMemoryDataset):
 
 if __name__ == "__main__":
     print("Tesdting Erdos-Renyi")
-    dataset = Erdos_Renyi_pyg('./data/SBM_final', nb_nodes1=200, nb_graphs1=500, nb_nodes2=200, nb_graphs2=500,
+    dataset = Erdos_Renyi_pyg('../data/SBM_final', nb_nodes1=200, nb_graphs1=500, nb_nodes2=200, nb_graphs2=500,
                         p1_min=0.1, p1_max=0.5, p2_min=0.3, p2_max=0.8)
     print()
     print(f'Dataset: {dataset}:')

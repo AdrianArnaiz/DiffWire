@@ -102,7 +102,7 @@ class SBM_pyg(InMemoryDataset):
 
 if __name__ == "__main__":
     print("Tesdting SBM")
-    dataset = SBM_pyg('./data/SBM_final', nb_nodes1=200, nb_graphs1=500, nb_nodes2=200, nb_graphs2=500, p1=0.8, p2=0.5, qmin1=0.5, qmax1=0.8, qmin2=0.25, qmax2=0.71, directed=False, transform=None, pre_transform=None)
+    dataset = SBM_pyg('../data/SBM_final', nb_nodes1=200, nb_graphs1=500, nb_nodes2=200, nb_graphs2=500, p1=0.8, p2=0.5, qmin1=0.5, qmax1=0.8, qmin2=0.25, qmax2=0.71, directed=False, transform=None, pre_transform=None)
 
     print()
     print(f'Dataset: {dataset}:')
