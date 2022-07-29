@@ -38,7 +38,7 @@ import numpy as np
 parser = argparse.ArgumentParser()
 parser.add_argument(
         "--dataset",
-        default="CIFAR10",
+        default="MUTAG",
         choices=["MUTAG","ENZYMES","PROTEINS","CIFAR10","MNIST","COLLAB","IMDB-BINARY","REDDIT-BINARY","CSL", "SBM", "ERDOS"],
         help="nada",
 )
@@ -52,7 +52,7 @@ parser.add_argument(
     "--derivative",
     default="laplacian",
     choices=["laplacian","normalizedv2","normalized"], #,"normalized"
-    help="nada",
+    help="Only used if model is GAP",
 )
 parser.add_argument(
     "--cuda",
@@ -64,7 +64,7 @@ parser.add_argument(
     "--prepro",
     default=None,
     choices=[None,"digl", "sdrf", "knn"],
-    help="digl preprocessing",
+    help="preprocessing",
 )
 parser.add_argument(
     "--store",

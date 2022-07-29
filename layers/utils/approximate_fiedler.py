@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import time
 
-from ein_utils import _rank3_diag
+from layers.utils.ein_utils import _rank3_diag
 
 def approximate_Fiedler(s, device=None): # torch.Size([20, N, k]) One k for each N of each graph (asume k=2)
   """
