@@ -152,16 +152,19 @@ class KNNGraph(BaseTransform):
         self.num_workers = num_workers
 
     def __call__(self, data):
+        had_features = True
         data.edge_attr = None
         batch = data.batch if 'batch' in data else None
 
         if data.x is None:
-            idx = data.edge_index[1 if self.in_degree else 0]
+            idx = data.edge_index[1]
             deg = degree(idx, data.num_nodes, dtype=torch.float).unsqueeze(-1)
             data.x = deg
+            had_features = False
 
         if self.k is None:
-            self.k = int(2*data.num_edges / data.num_edges)
+            self.k = int(data.num_edges / (data.num_nodes*4)) #mean degree - Note: num_edges is already doubled by default in PyG
+        
 
         edge_index = torch_geometric.nn.knn_graph(
             data.x,
@@ -172,11 +175,16 @@ class KNNGraph(BaseTransform):
             cosine=self.cosine,
             num_workers=self.num_workers,
         )
-
         if self.force_undirected:
             edge_index = to_undirected(edge_index, num_nodes=data.num_nodes)
 
         data.edge_index = edge_index
+
+        #Update degree
+        if not had_features:
+            idx = data.edge_index[1]
+            deg = degree(idx, data.num_nodes, dtype=torch.float).unsqueeze(-1)
+            data.x = deg
 
         return data
 
