@@ -38,4 +38,13 @@ python train.py --dataset REDDIT-BINARY --model GAPNet --derivative normalizeed 
 
 ## Citation
 
-**Under review**
+```
+@inproceedings{
+arnaiz-rodriguez2022diffwire,
+title={DiffWire: Inductive Graph Rewiring via the Lov\'asz Bound},
+author={Adrian Arnaiz-Rodriguez and Ahmed Begga and Francisco Escolano and Nuria Oliver},
+booktitle={Learning on Graphs Conference},
+year={2022},
+url={https://openreview.net/forum?id=IXvfIex0mX6f}
+}
+```
