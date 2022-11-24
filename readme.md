@@ -1,4 +1,12 @@
-# Inductive Graph Rewiring via the Lovász Bound
+# DiffWire: Inductive Graph Rewiring via the Lovász Bound
+
+**Accepted at the First Learning on Graphs Conference 2022**
+
+[![LoG](https://img.shields.io/badge/Published%20-Learning%20on%20Graphs-blue.svg)](https://openreview.net/forum?id=IXvfIex0mX6f&noteId=t5zJZuEIy1y)
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/diffwire-inductive-graph-rewiring-via-the/graph-classification-on-imdb-binary)](https://paperswithcode.com/sota/graph-classification-on-imdb-binary?p=diffwire-inductive-graph-rewiring-via-the)
+
+
+
 <img width="942" alt="image" src="https://user-images.githubusercontent.com/60975511/169371484-f31a1caa-0249-4c22-aba4-055cda206241.png">
 
 $$
